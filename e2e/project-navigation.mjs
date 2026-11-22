@@ -18,7 +18,7 @@ export function createProjectNavigationFixtures({ agentDir, sessionDir, timestam
   writeFileSync(gitConfig, "");
   const git = (...args) => execFileSync("git", [
     "-C", root, "-c", `core.hooksPath=${hooks}`, "-c", "commit.gpgsign=false",
-    "-c", "user.name=Pi Web E2E", "-c", "user.email=pi-web-test@example.invalid", ...args,
+    "-c", "user.name=Pi Hub E2E", "-c", "user.email=pi-web-test@example.invalid", ...args,
   ], { env: { ...process.env, GIT_CONFIG_NOSYSTEM: "1", GIT_CONFIG_GLOBAL: gitConfig }, timeout: 10_000, stdio: "pipe" });
   git("init", "-q");
   git("commit", "--allow-empty", "-qm", "fixture");

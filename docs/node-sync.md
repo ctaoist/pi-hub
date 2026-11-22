@@ -1,21 +1,21 @@
-# Pi Web node synchronization (WSS)
+# Pi Hub node synchronization (WSS)
 
 > Back up the agent directories first. Sync replaces whole files and propagates deletions; it is not a backup service or a JSON-key merge. Connect only machines you control and trust: synchronized extensions/configuration can execute code when subsequently loaded.
 
 ## Connect a node
 
-1. Run the same **WSS-capable** Pi Web version on both machines with Node >=22.19.0 and a strong `PI_WEB_PASSWORD`.
+1. Run the same **WSS-capable** Pi Hub version on both machines with Node >=22.19.0 and a strong `PI_WEB_PASSWORD`.
 2. The receiving node B needs an HTTPS/WSS address reachable from A, with a trusted certificate. Add its DNS name to `PI_WEB_ALLOWED_HOSTS`. LAN/VPN addresses work; no public Internet exposure is required.
-3. On A, open **Settings → Sync → Add a node**. Enter B's HTTPS origin, display name and existing Pi Web password. There is **no local address field**.
-4. A authenticates to B and opens an outbound WSS connection. B records an inbound member without A's URL or login credential. A's own Pi Web password is **not sent to B**.
-5. Enable **Automatic two-way sync** on both nodes. Configuration travels both ways over A's connection; B never needs to connect back to A. Closing the browser does not stop synchronization: the Pi Web server process owns the socket.
+3. On A, open **Settings → Sync → Add a node**. Enter B's HTTPS origin, display name and existing Pi Hub password. There is **no local address field**.
+4. A authenticates to B and opens an outbound WSS connection. B records an inbound member without A's URL or login credential. A's own Pi Hub password is **not sent to B**.
+5. Enable **Automatic two-way sync** on both nodes. Configuration travels both ways over A's connection; B never needs to connect back to A. Closing the browser does not stop synchronization: the Pi Hub server process owns the socket.
 
 ```text
 A (LAN/NAT, no inbound port) ── authenticated WSS ──▶ B (reachable HTTPS)
                             ◀── configuration ───▶
 ```
 
-Only B needs a reachable TLS server endpoint. A still has its own Pi Web login enabled, but does not need a domain, inbound firewall rule, server certificate or port forwarding to participate as a client. Two mutually unreachable machines still need a VPN or a shared reachable peer; WebSocket does not perform NAT traversal.
+Only B needs a reachable TLS server endpoint. A still has its own Pi Hub login enabled, but does not need a domain, inbound firewall rule, server certificate or port forwarding to participate as a client. Two mutually unreachable machines still need a VPN or a shared reachable peer; WebSocket does not perform NAT traversal.
 
 A↔B↔C can relay configuration through B. Node membership and login credentials are never relayed. Under authority mode each member should have a direct connection to the authority (the TCP connection may be initiated by either side).
 
@@ -34,12 +34,12 @@ Use `pi-web` / `npm start` for production, `npm run dev` for development. These 
 | Variable | Purpose |
 | --- | --- |
 | `PI_CODING_AGENT_DIR` | Agent directory, default `~/.pi/agent` |
-| `PI_WEB_PASSWORD` | Existing Pi Web login; required on each node |
+| `PI_WEB_PASSWORD` | Existing Pi Hub login; required on each node |
 | `PI_WEB_ALLOWED_HOSTS` | Exact hostnames accepted by the receiving server |
 | `PI_WEB_DISABLE_SYNC=1` | Disable sync connections and scheduling; restart after changing environment |
 | `NODE_EXTRA_CA_CERTS` | Optional PEM CA file for private certificates; must be trusted by the connecting Node process, not just the browser |
 
-Keep Pi Web behind a trusted TLS reverse proxy. Example Nginx location (inside the HTTPS server block):
+Keep Pi Hub behind a trusted TLS reverse proxy. Example Nginx location (inside the HTTPS server block):
 
 ```nginx
 location /api/sync/socket {
@@ -61,7 +61,7 @@ Do not log Authorization, cookies or bodies. Do not disable certificate verifica
 
 - Upgrade authentication uses the existing Basic login (`pi` username), shared login-failure throttle and Host/Origin rules. Browser cookies cannot authorize a sync socket. No separate account, pairing token or pairing key is introduced.
 - The receiver sends an ephemeral X25519 challenge; HKDF-SHA-256 derives a connection key. AES-256-GCM encrypts registration and every subsequent application frame, binding direction, connection nonce and exact increasing sequence as AAD. Replayed, reordered or altered frames close the connection. The connection generation ID is a nonsecret record version, not an authentication credential.
-- Only A stores B's login credential, encrypted under local `sync.key`. B stores A's identity and connection generation but no reverse credential/address. A can log into B with this full Pi Web password; B receives only a sync connection, not A's full login.
+- Only A stores B's login credential, encrypted under local `sync.key`. B stores A's identity and connection generation but no reverse credential/address. A can log into B with this full Pi Hub password; B receives only a sync connection, not A's full login.
 - Heartbeats run every five seconds; missed responses, invalid messages, binary frames, protocol-order violations or backpressure terminate the link. Handshake and exchange deadlines are bounded. At most 100 live/pending sockets and four simultaneous background connection attempts are allowed.
 - Filesystem events trigger synchronization, with a **300 ms debounce** (a continuous event burst is flushed after at most two seconds). Each node shares one bounded per-directory watcher set across its connections; newly created/replaced directories are rediscovered and symlinks/excluded trees are not watched. Quiet links send only heartbeats, not a 30-second sync round.
 - Each round exchanges a **complete version/hash index**, then only the bodies of new/changed files that can win the current conflict policy. Unchanged bodies are never resent; deletions carry tombstones only. This is file-level delta transfer, **not binary-block patches or JSON-key merge**. A changed file is sent whole.
@@ -110,4 +110,4 @@ npm run lint
 
 `e2e/sync-wss.mjs` uses temporary certificates, three isolated Node processes and real TLS sockets, not mock fetch. The browser test `e2e/sync-settings.mjs` uses real login but mocks `/api/sync` to avoid modifying real configuration. `docs/node-sync-validation.md` records validation evidence and outstanding checks.
 
-Native Windows/macOS, real multi-machine reverse-proxy/CA deployments, suspend/resume, clock skew and heavy-load/slow-disk behavior still need deployment-specific testing. Synchronous hashing/JSON/crypto is bounded but its latency impact is not benchmarked. Use one Pi Web process per agent directory; long-lived channels are process-local. Never run `next build` in the active development worktree.
+Native Windows/macOS, real multi-machine reverse-proxy/CA deployments, suspend/resume, clock skew and heavy-load/slow-disk behavior still need deployment-specific testing. Synchronous hashing/JSON/crypto is bounded but its latency impact is not benchmarked. Use one Pi Hub process per agent directory; long-lived channels are process-local. Never run `next build` in the active development worktree.

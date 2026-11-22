@@ -1,12 +1,12 @@
-# Pi Web
+# Pi Hub
 
 [中文文档](./docs/README.zh-CN.md) | [日本語](./docs/README.ja.md) | [Русский](./docs/README.ru.md)
 
-Local browser UI for the [pi coding agent](https://github.com/earendil-works/pi). Pi Web uses the same local configuration and session files as pi, so you can browse and resume conversations, run agent turns, configure models and resources, and inspect project files from a browser.
+Local browser UI for the [pi coding agent](https://github.com/earendil-works/pi). Pi Hub uses the same local configuration and session files as pi, so you can browse and resume conversations, run agent turns, configure models and resources, and inspect project files from a browser.
 
-**[Try the interactive demo →](https://agegr.github.io/pi-web/)** The real Pi Web UI runs entirely in your browser, with sample sessions, files and models. There is nothing to install; replies are pre-written and no model is called.
+**[Try the interactive demo →](https://agegr.github.io/pi-web/)** The real Pi Hub UI runs entirely in your browser, with sample sessions, files and models. There is nothing to install; replies are pre-written and no model is called.
 
-![Pi Web displaying a pi session with structured Markdown, tool calls, and project navigation](https://raw.githubusercontent.com/agegr/pi-web/main/docs/screenshot2.png)
+![Pi Hub displaying a pi session with structured Markdown, tool calls, and project navigation](https://raw.githubusercontent.com/agegr/pi-web/main/docs/screenshot2.png)
 
 ## Features
 
@@ -14,18 +14,18 @@ Local browser UI for the [pi coding agent](https://github.com/earendil-works/pi)
 - **Two ways to branch**: **New session** creates an independent session file from an earlier message; **Edit from here** creates a branch inside the current session.
 - **Project file tools**: browse and upload files, inspect Git diffs, and preview source, Markdown, images, audio, PDFs, and DOCX files with automatic refresh.
 - **Git worktrees**: switch checkouts from the sidebar while keeping sessions from the same repository grouped together.
-- **Web-based configuration**: manage provider login and API keys, models, model tests, plugin packages, and skills without leaving Pi Web.
-- **English, Simplified Chinese, and Traditional Chinese UI**: Pi Web follows the browser language initially. Change it under Settings → General → Language.
+- **Web-based configuration**: manage provider login and API keys, models, model tests, plugin packages, and skills without leaving Pi Hub.
+- **English, Simplified Chinese, and Traditional Chinese UI**: Pi Hub follows the browser language initially. Change it under Settings → General → Language.
 
 ## Quick Start
 
-Pi Web requires Node.js 22.19.0 or newer. Check your version with `node --version`, then run:
+Pi Hub requires Node.js 22.19.0 or newer. Check your version with `node --version`, then run:
 
 ```bash
 npx @agegr/pi-web@latest
 ```
 
-The CLI opens a browser after the server is ready. If it does not, open [http://127.0.0.1:30141](http://127.0.0.1:30141). Pi Web listens only on `127.0.0.1` by default.
+The CLI opens a browser after the server is ready. If it does not, open [http://127.0.0.1:30141](http://127.0.0.1:30141). Pi Hub listens only on `127.0.0.1` by default.
 
 If no model provider is configured yet, open the **Models** panel to sign in or add an API key.
 
@@ -58,8 +58,8 @@ For port and hostname, command-line options override the corresponding environme
 | `--port <port>`, `-p <port>`, or `PORT` | Server port | `30141` |
 | `--hostname <host>`, `-H <host>`, or `PI_WEB_HOSTNAME` | Bind hostname | `127.0.0.1` |
 | `--no-open` or `PI_WEB_NO_OPEN=1` | Do not open a browser automatically | Browser opens |
-| `PI_WEB_APP_NAME` | PWA manifest `name` and `short_name`; surrounding whitespace is trimmed, empty values use the default | `Pi Web` |
-| `PI_WEB_SKIP_VERSION_CHECK=1` | Disable Pi Web update checks | Unset |
+| `PI_WEB_APP_NAME` | PWA manifest `name` and `short_name`; surrounding whitespace is trimmed, empty values use the default | `Pi Hub` |
+| `PI_WEB_SKIP_VERSION_CHECK=1` | Disable Pi Hub update checks | Unset |
 | `PI_WEB_ALLOWED_HOSTS` | Additional exact proxy or custom hostnames, comma-separated | Unset |
 | `PI_WEB_PASSWORD` | Enable browser password login; API clients may use Basic Auth with username `pi` | Authentication disabled |
 | `PI_WEB_IDLE_TIMEOUT_MS` | Session idle timeout in milliseconds, up to `2147483647`; `0` disables idle shutdown; invalid or out-of-range values use the default | `600000` (10 min) |
@@ -83,17 +83,17 @@ Binding to a non-loopback address exposes an agent that can execute high-privile
 PI_WEB_PASSWORD='a-long-random-password' pi-web --hostname 0.0.0.0
 ```
 
-Password authentication does not encrypt the connection. Do not expose Pi Web over plain HTTP to the internet; use HTTPS through a trusted reverse proxy or a trusted VPN. If a reverse proxy sends an external hostname, add that exact name to `PI_WEB_ALLOWED_HOSTS`. This allow-list does not change the address Pi Web binds to.
+Password authentication does not encrypt the connection. Do not expose Pi Hub over plain HTTP to the internet; use HTTPS through a trusted reverse proxy or a trusted VPN. If a reverse proxy sends an external hostname, add that exact name to `PI_WEB_ALLOWED_HOSTS`. This allow-list does not change the address Pi Hub binds to.
 
 ### Synchronize trusted nodes
 
-**Settings → Sync** connects Windows, Linux and macOS Pi Web instances using their existing passwords and HTTPS. It synchronizes selected agent configuration and resource files, not sessions or installed dependencies, with automatic retries and latest-change or authority-node conflict handling. A node opens an outbound WSS connection using the remote login; both directions share that socket, with no local address or reverse login password required. Back up agent directories first. See [node synchronization and deployment](docs/node-sync.md) for scope, encryption, revocation, platform limits and validation steps.
+**Settings → Sync** connects Windows, Linux and macOS Pi Hub instances using their existing passwords and HTTPS. It synchronizes selected agent configuration and resource files, not sessions or installed dependencies, with automatic retries and latest-change or authority-node conflict handling. A node opens an outbound WSS connection using the remote login; both directions share that socket, with no local address or reverse login password required. Back up agent directories first. See [node synchronization and deployment](docs/node-sync.md) for scope, encryption, revocation, platform limits and validation steps.
 
-With many chats, terminals or file previews active at once, plain HTTP limits the browser to six connections and requests start to wait; see [Serving Pi Web over HTTP/2](./docs/http2.md).
+With many chats, terminals or file previews active at once, plain HTTP limits the browser to six connections and requests start to wait; see [Serving Pi Hub over HTTP/2](./docs/http2.md).
 
 ### Docker
 
-Each release publishes an image to `ghcr.io/agegr/pi-web`. See [Running Pi Web in Docker](./docs/docker.md) for it, the Compose example and which volumes to keep.
+Each release publishes an image to `ghcr.io/agegr/pi-web`. See [Running Pi Hub in Docker](./docs/docker.md) for it, the Compose example and which volumes to keep.
 
 ### HTTP Proxy
 
@@ -119,12 +119,12 @@ npx @agegr/pi-web@latest
 
 ## Notes
 
-- **Agent data**: Pi Web reads pi data from `~/.pi/agent` by default, including session files under `sessions/<encoded-cwd>/<timestamp>_<uuid>.jsonl`. Set `PI_CODING_AGENT_DIR` to use another pi agent directory.
-- **Filesystem access**: Pi Web must be able to read the agent data directory and the working directories recorded by its sessions. Run Pi Web in the same filesystem environment as pi when sharing existing sessions.
+- **Agent data**: Pi Hub reads pi data from `~/.pi/agent` by default, including session files under `sessions/<encoded-cwd>/<timestamp>_<uuid>.jsonl`. Set `PI_CODING_AGENT_DIR` to use another pi agent directory.
+- **Filesystem access**: Pi Hub must be able to read the agent data directory and the working directories recorded by its sessions. Run Pi Hub in the same filesystem environment as pi when sharing existing sessions.
 - **Shared configuration**: the Models panel uses pi's model, settings, and credential storage, so changes are visible to both interfaces. An open session applies a saved edit of its model when you select the model again.
-- **File access boundary**: the file browser is limited to working directories selected in Pi Web and project or session roots it already knows about; it is not a general filesystem browser.
-- **Git worktrees**: see [Worktrees in Pi Web](./docs/worktrees.md) for switcher visibility, worktree creation, and removal behavior.
-- **Integration hooks**: apps that embed Pi Web can replace the session row's context menu, and server-side pi extensions can keep a session from idle shutdown; see [Integration Hooks](./docs/integrations.md).
+- **File access boundary**: the file browser is limited to working directories selected in Pi Hub and project or session roots it already knows about; it is not a general filesystem browser.
+- **Git worktrees**: see [Worktrees in Pi Hub](./docs/worktrees.md) for switcher visibility, worktree creation, and removal behavior.
+- **Integration hooks**: apps that embed Pi Hub can replace the session row's context menu, and server-side pi extensions can keep a session from idle shutdown; see [Integration Hooks](./docs/integrations.md).
 
 ## Development
 

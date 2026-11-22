@@ -37,7 +37,7 @@ export async function createModelRuntimeWithExtensions(): Promise<ModelRuntime> 
  * The options pi's TUI passes to `ModelRuntime.login()`. Sign in with ChatGPT
  * (the `openai` provider's OAuth) refuses to start without this installation's
  * device ID; pi creates it on first use and keeps it as `deviceId` in the
- * global settings.json, so the TUI and Pi Web sign in as the same host.
+ * global settings.json, so the TUI and Pi Hub sign in as the same host.
  * `flush()` waits for that first write.
  */
 export function createLoginOptions(agentDir = getAgentDir()) {
@@ -61,8 +61,8 @@ declare global {
   var __piWebSharedModelRuntime: SharedModelRuntime | undefined;
 }
 
-// Pi Web's own plugin changes and reloads invalidate the entry, so the TTL is
-// only a backstop for changes made outside Pi Web: `pi install` from a
+// Pi Hub's own plugin changes and reloads invalidate the entry, so the TTL is
+// only a backstop for changes made outside Pi Hub: `pi install` from a
 // terminal, an edited extension file. A build blocks the event loop while it
 // imports (13 s with 11 extensions, #1465), so this stays rare; `/reload` applies
 // such a change at once.
@@ -80,7 +80,7 @@ const REFRESH_QUEUE_KEY: symbol = Symbol.for("pi-web:shared-model-runtime-refres
  * it does. Only the extension registrations are reused: each call refreshes
  * the runtime offline, which reads models.json, auth.json and
  * models-store.json again, so auth status is as fresh as a new runtime's.
- * Extensions changed outside Pi Web show once the entry expires; Pi Web's own
+ * Extensions changed outside Pi Hub show once the entry expires; Pi Hub's own
  * plugin changes and reloads call `invalidateModelRuntimeWithExtensions()`.
  */
 export async function getModelRuntimeWithExtensions(): Promise<ModelRuntime> {

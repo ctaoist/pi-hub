@@ -29,7 +29,7 @@ export interface SubagentProfile {
   extensionTools?: string[];
   loadSkills: boolean;
   loadExtensions: boolean;
-  /** Whether this profile enables Pi Web's codemode tool. Omitted profiles are disabled. */
+  /** Whether this profile enables Pi Hub's codemode tool. Omitted profiles are disabled. */
   codemode?: SubagentCodemode;
   model?: string;
   thinking?: ThinkingLevel;

@@ -26,7 +26,7 @@ try {
   const baseUrl = process.env.PI_SYNC_E2E_URL ?? "http://127.0.0.1:30141";
   if (process.env.PI_SYNC_E2E_PASSWORD) {
     const login = await page.request.post(`${baseUrl}/api/web-auth`, { data: { password: process.env.PI_SYNC_E2E_PASSWORD } });
-    assert.equal(login.ok(), true, "Existing Pi Web login must succeed");
+    assert.equal(login.ok(), true, "Existing Pi Hub login must succeed");
   }
   await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
   if (new URL(page.url()).pathname === "/login") throw new Error("Set PI_SYNC_E2E_PASSWORD to test the authenticated dev server");
@@ -42,10 +42,10 @@ try {
   await page.getByLabel("Name", { exact: true }).fill("Laptop");
   await page.getByLabel("Remote HTTPS URL", { exact: true }).fill("https://laptop.example");
   assert.equal(await page.getByLabel("This node's HTTPS URL", { exact: true }).count(), 0);
-  await page.getByLabel("Remote Pi Web password", { exact: true }).fill("test-only-password");
+  await page.getByLabel("Remote Pi Hub password", { exact: true }).fill("test-only-password");
   await page.getByRole("button", { name: "Connect node", exact: true }).click();
   await page.locator(".settings-sync-node").waitFor();
-  assert.equal(await page.getByLabel("Remote Pi Web password", { exact: true }).inputValue(), "");
+  assert.equal(await page.getByLabel("Remote Pi Hub password", { exact: true }).inputValue(), "");
   await page.getByRole("switch", { name: "Automatic two-way sync" }).click();
   await page.waitForFunction(() => document.querySelector('[aria-label="Automatic two-way sync"]').getAttribute("aria-checked") === "true");
   await page.locator("#settings-sync-strategy").selectOption("authority");

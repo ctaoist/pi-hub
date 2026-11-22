@@ -225,7 +225,7 @@ function inactiveHosts(): Map<string, McpHostInactiveInfo> {
 }
 
 /**
- * Records that the session `sessionId` connects no server through Pi Web,
+ * Records that the session `sessionId` connects no server through Pi Hub,
  * because its `/mcp` command is another extension's. Kept while the session
  * is open: its host forgets it when the session ends, or starts again with
  * Pi's own `/mcp`.

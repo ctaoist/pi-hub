@@ -34,7 +34,7 @@ async function main() {
       else socket.end("HTTP/1.1 503 Unavailable\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
     } else if (!upgrades.emit("upgrade", req, socket, head)) socket.destroy();
   });
-  server.on("error", () => { console.error("Pi Web server failed to listen"); process.exitCode = 1; });
+  server.on("error", () => { console.error("Pi Hub server failed to listen"); process.exitCode = 1; });
   let stopping = false;
   const stop = () => {
     if (stopping) return; stopping = true;
@@ -51,6 +51,6 @@ async function main() {
     const req = http.get({ host: hostname === "0.0.0.0" ? "127.0.0.1" : hostname === "::" ? "::1" : hostname, port: address.port, path: "/api/web-auth", timeout: 30_000 }, (res) => { res.resume(); res.on("end", resolve); });
     req.on("error", resolve); req.on("timeout", () => req.destroy());
   });
-  console.log(`Ready - Pi Web on ${hostname}:${address.port}`);
+  console.log(`Ready - Pi Hub on ${hostname}:${address.port}`);
 }
-main().catch(() => { console.error("Pi Web server startup failed"); process.exitCode = 1; });
+main().catch(() => { console.error("Pi Hub server startup failed"); process.exitCode = 1; });

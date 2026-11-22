@@ -2,7 +2,7 @@ import { lstatSync, opendirSync, realpathSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 
-/** Files and resource directories that may move between Pi Web nodes. */
+/** Files and resource directories that may move between Pi Hub nodes. */
 export const SYNC_ROOT_FILES = [
   "auth.json",
   "settings.json",

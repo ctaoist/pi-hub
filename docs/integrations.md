@@ -1,6 +1,6 @@
 # Integration Hooks
 
-Two hooks for code that runs alongside Pi Web: a browser event for apps that embed it (an Electron wrapper, for example) and a server-side registry for pi extensions. Neither is needed to use Pi Web.
+Two hooks for code that runs alongside Pi Hub: a browser event for apps that embed it (an Electron wrapper, for example) and a server-side registry for pi extensions. Neither is needed to use Pi Hub.
 
 ## Downstream Session Context Menu
 
@@ -22,7 +22,7 @@ window.addEventListener("pi-web:session-row-contextmenu", (event) => {
 
 The detail object contains `id`, `path`, `cwd`, optional `name`, pointer
 coordinates, and a `refresh()` callback for actions that change the session
-list. If no listener cancels the extension event, Pi Web opens its built-in
+list. If no listener cancels the extension event, Pi Hub opens its built-in
 session menu (pin, rename, fork, mark read or unread, archive, open in new
 tab, delete) at the pointer instead of the browser's native context menu.
 The row's `⋯` button always opens the built-in menu and does not dispatch the

@@ -117,7 +117,7 @@ function readKey(agentDir: string): Buffer {
   const key = generateSyncKey();
   mkdirSync(dirname(path), { recursive: true });
   try {
-    // wx makes first-use initialization safe when two Pi Web processes start
+    // wx makes first-use initialization safe when two Pi Hub processes start
     // against the same agent directory at once.
     writeFileSync(path, `${JSON.stringify({ version: 1, key: key.toString("base64url") } satisfies StoredSyncKey)}\n`, {
       flag: "wx",
@@ -143,7 +143,7 @@ function defaultConfig(): SyncConfig {
     version: 1,
     node: {
       id,
-      name: hostname() || "Pi Web",
+      name: hostname() || "Pi Hub",
       platform: getSyncPlatform(),
     },
     enabled: false,
@@ -370,7 +370,7 @@ async function insertSyncNode(input: NewSyncNode, agentDir: string): Promise<Syn
   if (!input.name.trim() || input.name.trim().length > 100) throw new Error("Node name is required");
   if (!input.password || input.password.length > 4096) throw new Error("Node password is required");
   return updateSyncConfig((config) => {
-    if (config.nodes.some((node) => node.id === input.id || node.url === url)) throw new Error("This Pi Web node is already configured");
+    if (config.nodes.some((node) => node.id === input.id || node.url === url)) throw new Error("This Pi Hub node is already configured");
     if (config.nodes.length >= MAX_SYNC_NODES) throw new Error("Too many synchronization nodes");
     if (input.id !== undefined && (!syncId(input.id) || input.id === config.node.id)) throw new Error("Invalid peer registration");
     const node: SyncNode = {
@@ -395,13 +395,13 @@ export async function registerInboundSyncNode(input: {
   if (!syncId(input.id) || !syncId(input.connectionId) || !input.name.trim() || input.name.length > 100
     || !["windows", "macos", "linux", "other"].includes(input.platform)) throw new Error("Invalid peer registration");
   await updateSyncConfig((config) => {
-    if (input.id === config.node.id) throw new Error("A Pi Web node cannot synchronize with itself");
+    if (input.id === config.node.id) throw new Error("A Pi Hub node cannot synchronize with itself");
     const existing = config.nodes.find((node) => node.id === input.id);
     if (existing) {
       if (!existing.enabled) throw new Error("Sync peer is not configured or disabled");
       // Never let concurrent registrations replace an established generation.
       // Reconnect by removing the old record on both sides first.
-      if (existing.connectionId !== input.connectionId || existing.direction !== "inbound") throw new Error("This Pi Web node is already configured");
+      if (existing.connectionId !== input.connectionId || existing.direction !== "inbound") throw new Error("This Pi Hub node is already configured");
       Object.assign(existing, input, { direction: "inbound", status: "unknown" });
       delete existing.url;
       delete existing.credential;

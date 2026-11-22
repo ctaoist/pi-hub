@@ -8,7 +8,7 @@ export function demoAssetPath(path: string): string {
 
 /**
  * Current pathname without the base path, for `router.replace()`, which adds
- * the base path itself. Pi Web passes `window.location.pathname` directly.
+ * the base path itself. Pi Hub passes `window.location.pathname` directly.
  */
 export function demoRouterPath(): string {
   if (typeof window === "undefined") return "/";

@@ -144,7 +144,7 @@ function acceptSocket(ws: WebSocket, agentDir: string): void {
       if (phase === "hello") {
         const peer = parseSyncIdentity({ ...(syncRecord(value.node) ? value.node : {}), protocol: 1 });
         if (!syncId(value.connectionId) || (value.type !== "register" && value.type !== "resume")) throw new Error("Invalid sync handshake");
-        if (value.type === "register" && [...runtime().links].some((other) => other !== link && other.agentDir === agentDir && other.peerId === peer.id)) throw new Error("This Pi Web node is already connected");
+        if (value.type === "register" && [...runtime().links].some((other) => other !== link && other.agentDir === agentDir && other.peerId === peer.id)) throw new Error("This Pi Hub node is already connected");
         if (!enabled() || link.authenticatedPassword !== process.env.PI_WEB_PASSWORD) throw new Error("Synchronization is disabled");
         if (value.type === "register") await registerInboundSyncNode({ ...peer, connectionId: value.connectionId }, agentDir);
         else {
@@ -211,7 +211,7 @@ async function dial(options: DialOptions): Promise<{ link: Link; peer: SyncPeerI
           if (value.protocol !== 3 || typeof value.nonce !== "string" || !/^[a-f0-9]{48}$/.test(value.nonce) || typeof value.publicKey !== "string") throw new Error("Invalid sync handshake");
           peer = parseSyncIdentity({ ...(syncRecord(value.node) ? value.node : {}), protocol: 1 });
           if (peer.id === local.node.id || (options.peerId && peer.id !== options.peerId)) throw new Error("Synchronization peer identity changed");
-          if (options.register && local.nodes.some((node) => node.id === peer.id)) throw new Error("This Pi Web node is already configured");
+          if (options.register && local.nodes.some((node) => node.id === peer.id)) throw new Error("This Pi Hub node is already configured");
           link.peerId = peer.id;
           const keys = createSyncExchange();
           channel = new SyncChannel(ws, syncExchangeSecret(keys.privateKey, value.publicKey, value.nonce), value.nonce, "client");
@@ -250,9 +250,9 @@ export async function connectSyncNode(input: { name: string; url: string; passwo
   if (!input.password || input.password.length > 4096 || input.name.length > 100) throw new Error("Invalid node details");
   const url = normalizeNodeUrl(input.url);
   const config = await readSyncConfig(agentDir);
-  if (config.nodes.some((node) => node.url === url)) throw new Error("This Pi Web node is already configured");
+  if (config.nodes.some((node) => node.url === url)) throw new Error("This Pi Hub node is already configured");
   const key = binding(agentDir, url);
-  if (runtime().pending.has(key)) throw new Error("This Pi Web node is already configured");
+  if (runtime().pending.has(key)) throw new Error("This Pi Hub node is already configured");
   runtime().pending.add(key);
   try {
     const result = await dial({ ...input, url, agentDir, register: true, connectionId: randomUUID() });

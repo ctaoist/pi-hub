@@ -8,7 +8,7 @@ Accepted. Implemented, except the two follow-ups at the end.
 
 Codex's `/side` forks the current chat for a detour: its history stays available
 to the model, a hidden boundary says that history is not the current task, and
-nesting is refused. Pi Web needs the same during a long run, without steering the
+nesting is refused. Pi Hub needs the same during a long run, without steering the
 task or losing the parent's context.
 
 - One session file has one live wrapper and one leaf, so a side chat beside a

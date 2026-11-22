@@ -100,6 +100,6 @@ These existing failures were not changed or hidden by the sync work. The full su
 4. Device-bound/rotating OAuth credentials may require per-device login despite copying `auth.json`.
 5. Writes are atomic per file, not a multi-file transaction or guaranteed power-loss recovery. Locks coordinate cooperative writers, not adversarial filesystem replacement.
 6. One process per agent directory is the supported deployment model; in-memory one-use exchange secrets are not shared across load-balanced workers.
-7. Removing a node does not revoke its previously shared full Pi Web password. Remove both records and rotate passwords to revoke access.
+7. Removing a node does not revoke its previously shared full Pi Hub password. Remove both records and rotate passwords to revoke access.
 
 See [node-sync.md](node-sync.md) for deployment, scope, backup and revocation instructions.

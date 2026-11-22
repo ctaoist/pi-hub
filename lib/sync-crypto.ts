@@ -68,7 +68,7 @@ export function decryptSyncSecret(payload: EncryptedSecret, key: Buffer | Uint8A
 }
 
 function derivePasswordKey(password: string, salt: Buffer): Buffer {
-  if (!password) throw new Error("Pi Web password is required for sync");
+  if (!password) throw new Error("Pi Hub password is required for sync");
   return scryptSync(password, salt, KEY_BYTES, SCRYPT_OPTIONS);
 }
 

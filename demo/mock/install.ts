@@ -1,7 +1,7 @@
 /**
- * Replaces the network layer before any Pi Web component runs: every
+ * Replaces the network layer before any Pi Hub component runs: every
  * `/api/...` fetch and EventSource is answered in the page by the mock
- * backend, so the untouched UI behaves as if a Pi Web server were running.
+ * backend, so the untouched UI behaves as if a Pi Hub server were running.
  */
 import { MockEventSource, setStreamResolver } from "./event-source";
 import { handleApiRequest, resolveApiStream, warmDemoAssets } from "./router";
@@ -27,7 +27,7 @@ function isApiUrl(url: URL): boolean {
 
 /**
  * First visit in this tab with a bare URL: open the welcome tour instead of an
- * empty composer. Pi Web restores `pi-web:tab-open-session` on load.
+ * empty composer. Pi Hub restores `pi-web:tab-open-session` on load.
  */
 function openWelcomeSessionOnFirstVisit(): void {
   try {
@@ -36,7 +36,7 @@ function openWelcomeSessionOnFirstVisit(): void {
     if (window.sessionStorage.getItem("pi-web:tab-open-session")) return;
     window.sessionStorage.setItem("pi-web:tab-open-session", JSON.stringify({ kind: "session", sessionId: WELCOME_SESSION_ID }));
   } catch {
-    // Storage unavailable: Pi Web falls back to the most recent project.
+    // Storage unavailable: Pi Hub falls back to the most recent project.
   }
 }
 

@@ -1,6 +1,6 @@
 name: Demo
 
-# Builds the static Pi Web demo in demo/ and publishes it to GitHub Pages.
+# Builds the static Pi Hub demo in demo/ and publishes it to GitHub Pages.
 # main deploys it when the demo or package.json changes: a release bumps the
 # version the demo reports, so each release redeploys it. (The github-pages
 # environment accepts main only, so a release tag cannot deploy it.) Pull
