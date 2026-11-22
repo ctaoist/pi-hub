@@ -7,14 +7,13 @@ import { basename, dirname, join } from "path";
  * renamed onto the destination, so a process killed mid-write leaves the old
  * file whole. The caller must create the parent directory first.
  */
-function writeFileAtomicSync(path: string, contents: string, mode: number, exactMode = false): void {
+function writeFileAtomicSync(path: string, contents: string | Buffer, mode: number, exactMode = false): void {
   const dir = dirname(path);
   const tempPath = join(dir, `.${basename(path)}-${randomUUID()}.tmp`);
   let operationFailed = false;
 
   try {
     writeFileSync(tempPath, contents, {
-      encoding: "utf8",
       flag: "wx",
       mode,
       flush: true,
@@ -41,6 +40,11 @@ function writeFileAtomicSync(path: string, contents: string, mode: number, exact
  * process permissions. The caller must create the parent directory first.
  */
 export function writePrivateFileAtomicSync(path: string, contents: string): void {
+  writeFileAtomicSync(path, contents, 0o600);
+}
+
+/** Atomically replace a private file with raw bytes without text encoding. */
+export function writePrivateBufferAtomicSync(path: string, contents: Buffer): void {
   writeFileAtomicSync(path, contents, 0o600);
 }
 

@@ -36,11 +36,11 @@
   ],
   "scripts": {
     "postinstall": "node bin/prepare-terminal.js",
-    "dev": "next dev -H 127.0.0.1 -p 30141",
-    "dev:lan": "next dev -H 0.0.0.0 -p 30141",
+    "dev": "node bin/pi-web-server.js --dev -H 127.0.0.1 -p 30141",
+    "dev:lan": "node bin/pi-web-server.js --dev -H 0.0.0.0 -p 30141",
     "build": "next build --webpack",
-    "start": "next start -H 127.0.0.1 -p 30141",
-    "start:lan": "next start -H 0.0.0.0 -p 30141",
+    "start": "node bin/pi-web.js --hostname 127.0.0.1 --port 30141 --no-open",
+    "start:lan": "node bin/pi-web.js --hostname 0.0.0.0 --port 30141 --no-open",
     "lint": "eslint .",
     "test:terminal": "node e2e/terminal.mjs",
     "test:e2e": "node e2e/run.mjs",
@@ -67,7 +67,8 @@
     "semver": "7.8.5",
     "typebox": "1.3.27",
     "undici": "8.12.3",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "ws": "8.23.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.2",
@@ -80,6 +81,7 @@
     "@types/react-syntax-highlighter": "^15.5.13",
     "@types/semver": "7.8.0",
     "@types/web-push": "^3.6.4",
+    "@types/ws": "8.18.2",
     "ansi_up": "^6.0.6",
     "eslint": "^9",
     "eslint-config-next": "16.4.6",

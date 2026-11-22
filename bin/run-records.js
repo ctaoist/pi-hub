@@ -80,7 +80,7 @@ function isRecordProcess(pid, role, { platform = process.platform, readCommand =
   const command = readCommand(pid, { platform });
   if (command === null) return true;
   if (platform === "win32") return /^node/i.test(command);
-  return role === "launcher" ? command.includes("pi-web") : command.includes("next");
+  return role === "launcher" ? command.includes("pi-web") : command.includes("next") || command.includes("pi-web-server.js");
 }
 
 function recordPath(dir, pid) {

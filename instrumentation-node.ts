@@ -1,6 +1,7 @@
 import { configureHttpDispatcher, readHttpIdleTimeoutMs } from "@/lib/http-dispatcher";
 import { closeAllAgentEventStreams } from "@/lib/agent-event-stream";
 import { applyCodemodeWorkerDefault } from "@/lib/codemode-workers";
+import { installSyncUpgradeHandler, startSyncScheduler, stopSyncScheduler } from "@/lib/sync-socket";
 
 export function registerNodeInstrumentation(): void {
   // Before any session can run a codemode script (lib/codemode-workers.ts).
@@ -15,9 +16,15 @@ export function registerNodeInstrumentation(): void {
   // In production Next 16 answers SIGINT/SIGTERM with server.close() and waits
   // for every connection to end, without a timeout. SSE streams only end when
   // the client disconnects, so close them here or the process never exits.
-  const shutdownStreams = () => closeAllAgentEventStreams();
+  const shutdownStreams = () => {
+    stopSyncScheduler();
+    closeAllAgentEventStreams();
+  };
   process.on("SIGINT", shutdownStreams);
   process.on("SIGTERM", shutdownStreams);
+
+  installSyncUpgradeHandler();
+  startSyncScheduler();
 
   // Next evaluates a route's code on its first request, so the first
   // /api/sessions used to pay for importing the whole pi SDK, seconds on
