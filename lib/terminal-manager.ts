@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { homedir } from "os";
+import { homedir, userInfo } from "os";
 import type { IPty } from "node-pty";
 import { getPowerShellConfig } from "@earendil-works/pi-coding-agent";
 import { samePath } from "./paths";
@@ -64,16 +64,36 @@ function shellEnvironment(): Record<string, string> {
   return env;
 }
 
+/** Read an environment variable without assuming Windows' casing. */
+function environmentVariable(name: string): string | undefined {
+  const entry = Object.entries(process.env).find(([key]) => key.toLowerCase() === name.toLowerCase());
+  const value = entry?.[1]?.trim();
+  return value || undefined;
+}
+
+function loginShell(): string | undefined {
+  try {
+    const shell = userInfo().shell;
+    return typeof shell === "string" && shell.trim() ? shell.trim() : undefined;
+  } catch {
+    // Some restricted runtimes cannot query the OS user record.
+    return undefined;
+  }
+}
+
 /**
- * A new terminal's shell. Windows: PowerShell as pi's `powershell` tool resolves it (PowerShell 7,
- * then Windows PowerShell; `where` keeps a Store install's WindowsApps alias), else ComSpec / cmd.
+ * A new terminal follows the service user's default shell. POSIX uses the
+ * shell from the OS user record, then SHELL, and finally /bin/sh. Windows
+ * honors SHELL, then falls back to PowerShell or ComSpec/cmd.exe.
  */
 function terminalShell(): { file: string; args: string[] } {
-  if (process.platform !== "win32") return { file: process.env.SHELL || "/bin/sh", args: ["-l"] };
+  const configuredShell = environmentVariable("SHELL");
+  if (process.platform !== "win32") return { file: loginShell() || configuredShell || "/bin/sh", args: ["-l"] };
+  if (configuredShell) return { file: configuredShell, args: [] };
   try {
     return { file: getPowerShellConfig().shell, args: [] };
   } catch {
-    return { file: process.env.ComSpec ?? "cmd.exe", args: [] };
+    return { file: environmentVariable("ComSpec") || "cmd.exe", args: [] };
   }
 }
 
