@@ -38,6 +38,8 @@ interface ModelSelectorProps {
   defaultValue?: { provider: string; modelId: string } | null;
   /** Shows a star on every row that saves it as the default. */
   onSetDefault?: (provider: string, modelId: string) => void;
+  /** Shows the current provider alongside the model in the trigger. */
+  showProvider?: boolean;
   /** Every available model, once loaded; listed under "all". */
   allOptions?: ModelSelectorOption[] | null;
   /** Set only while `enabledModels` narrows `options`: shows pi's `/model` "scoped | all" row and loads `allOptions`. */
@@ -94,6 +96,7 @@ export function ModelSelector({
   placement = "up",
   defaultValue,
   onSetDefault,
+  showProvider = false,
   allOptions,
   onShowAll,
 }: ModelSelectorProps) {
@@ -121,9 +124,13 @@ export function ModelSelector({
   };
   const modelsByProvider = groupModelOptions(filteredOptions);
 
+  const currentOption = value ? (isListed(options, value) ?? isListed(allOptions, value)) : undefined;
   const currentName = selectedLabel ?? (value
-    ? (isListed(options, value) ?? isListed(allOptions, value))?.name ?? value.modelId
+    ? currentOption?.name ?? value.modelId
     : emptyLabel ?? (options.length > 0 ? t("chat.selectModel") : t("chat.noModels")));
+  const currentProvider = showProvider && value
+    ? currentOption?.providerName?.trim() || value.provider
+    : null;
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
@@ -283,6 +290,12 @@ export function ModelSelector({
             <line x1="1" y1="9" x2="4" y2="9" /><line x1="1" y1="14" x2="4" y2="14" />
           </svg>
         )}
+        {currentProvider && (
+          <span style={{ flexShrink: 0, maxWidth: "42%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--text-dim)", fontSize: 10, fontFamily: "var(--font-mono)" }}>
+            {currentProvider}
+          </span>
+        )}
+        {currentProvider && <span aria-hidden="true" style={{ color: "var(--text-dim)", flexShrink: 0 }}>·</span>}
         <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{currentName}</span>
         {variant === "field" && (
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0, color: "var(--text-dim)" }}>

@@ -2679,6 +2679,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle, Props>(function ChatIn
                 value={model}
                 onChange={onModelChange}
                 onReselect={onModelChange}
+                showProvider
                 busy={modelSwitching}
                 isAutoSelection={isAutoModelSelection}
                 defaultValue={defaultModel}

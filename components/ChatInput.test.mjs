@@ -562,7 +562,7 @@ test("shows and locks the optimistic model while a switch is pending", () => {
         onModelChange() {},
         isStreaming: false,
         model: { provider: "deepseek", modelId: "deepseek-v4-flash" },
-        modelList: [{ provider: "deepseek", id: "deepseek-v4-flash", name: "DeepSeek V4 Flash" }],
+        modelList: [{ provider: "deepseek", providerName: "DeepSeek", id: "deepseek-v4-flash", name: "DeepSeek V4 Flash" }],
         modelSwitching: true,
       }),
     ),
@@ -572,6 +572,7 @@ test("shows and locks the optimistic model while a switch is pending", () => {
   assert.match(html, /aria-busy="true"/);
   assert.match(html, /disabled=""/);
   assert.match(html, />DeepSeek V4 Flash</);
+  assert.match(html, />DeepSeek<\/span>/);
   assert.match(html, /animation:spin 0\.8s linear infinite/);
 });
 
