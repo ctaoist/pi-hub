@@ -2,20 +2,20 @@
 
 This repo publishes three artifacts for each release:
 
-- npm package: `@agegr/pi-web`, published by GitHub Actions (`.github/workflows/publish.yml`) when a `v*` tag is pushed
-- Docker image: `ghcr.io/agegr/pi-web`, tagged `<version>`, `<major>.<minor>` and `latest`, published by the same workflow on the same tag (see [docker.md](./docker.md))
-- GitHub Release: `agegr/pi-web`
+- npm package: `@ctaoist/pi-hub`, published by GitHub Actions (`.github/workflows/publish.yml`) when a `v*` tag is pushed
+- Docker image: `ghcr.io/ctaoist/pi-hub`, tagged `<version>`, `<major>.<minor>` and `latest`, published by the same workflow on the same tag (see [docker.md](./docker.md))
+- GitHub Release: `ctaoist/pi-hub`
 
-Use this checklist from a clean `main` checkout.
+Use this checklist from a clean `hub` checkout.
 
 ## 0. One-time Setup: npm Trusted Publishing
 
 The publish workflow authenticates to npm with Trusted Publishing (OIDC). No npm token exists anywhere, so nothing expires or needs rotating.
 
-On npmjs.com, open `@agegr/pi-web` → Settings → Trusted Publisher → GitHub Actions and enter:
+On npmjs.com, open `@ctaoist/pi-hub` → Settings → Trusted Publisher → GitHub Actions and enter:
 
-- Organization or user: `agegr`
-- Repository: `pi-web`
+- Organization or user: `ctaoist`
+- Repository: `pi-hub`
 - Workflow filename: `publish.yml`
 - Environment: leave empty
 - Permissions: `npm publish` only. The workflow publishes directly; `npm stage publish` (a staged version that waits for a maintainer's 2FA approval) is not used.
@@ -28,16 +28,16 @@ Renaming the workflow file breaks publishing until this entry is updated. Settin
 git fetch origin
 git status --short --branch
 git log --oneline --decorate -5
-git rev-list --left-right --count main...origin/main
+git rev-list --left-right --count hub...origin/hub
 gh auth status
 node -e "const p=require('./package.json'); console.log(p.version)"
-gh run list --branch main --workflow ci.yml --limit 1
+gh run list --branch hub --workflow ci.yml --limit 1
 ```
 
 Expected:
 
 - `git status` is clean: `npm version` refuses a dirty tree.
-- `main` and `origin/main` are aligned (`0	0`), and every commit meant for this release is on `origin/main`. A commit merged only locally has had no CI run: push `main` first and wait for CI.
+- `hub` and `origin/hub` are aligned (`0	0`), and every commit meant for this release is on `origin/hub`. A commit merged only locally has had no CI run: push `hub` first and wait for CI.
 - GitHub is authenticated as an account that can push and create releases.
 - CI on the commit you are releasing passed. The publish workflow only builds; it does not lint or test.
 
@@ -46,7 +46,7 @@ Nothing is built locally, so a running dev server on 30141 is safe, and a local 
 Before bumping, confirm the next version is free (replace `<version>`):
 
 ```bash
-npm view @agegr/pi-web@<version> version --registry https://registry.npmjs.org/   # expect E404
+npm view @ctaoist/pi-hub@<version> version --registry https://registry.npmjs.org/   # expect E404
 git ls-remote --tags origin v<version>                                            # expect empty
 ```
 
@@ -84,7 +84,7 @@ git tag --points-at HEAD
 ## 3. Push: CI Publishes to npm and GHCR
 
 ```bash
-git push origin main v<version>
+git push origin hub v<version>
 ```
 
 Push the release tag by name. Do not use `git push --tags`: the local checkout holds tags fetched from contributor forks that are not on origin, and `--tags` publishes them (it leaked a stray `v0.10.5`, on a commit that is on no branch, during the v0.11.0 release). If you ever need `--tags`, compare `git tag` with `git ls-remote --tags origin` first.
@@ -101,18 +101,18 @@ gh run list --workflow publish.yml --limit 1
 gh run watch <run-id> --exit-status
 ```
 
-The same push to `main` also redeploys the demo (`demo-pages.yml`), since the release commit changes `package.json`.
+The same push to `hub` also redeploys the demo (`demo-pages.yml`), since the release commit changes `package.json`.
 
 Notes:
 
 - `gh run watch` can return a non-zero exit while the run is still going (it did on the long container build). Check `gh run view <run-id>` before treating it as a failure.
 
-- A newly published version may take a few minutes to show up. `npm view @agegr/pi-web@<version> version` can return E404 and `npm view @agegr/pi-web version` can show the previous version even though the workflow log printed `+ @agegr/pi-web@<version>`. This is registry propagation, not a failed publish: do not re-run the workflow. Poll the registry until the version appears:
+- A newly published version may take a few minutes to show up. `npm view @ctaoist/pi-hub@<version> version` can return E404 and `npm view @ctaoist/pi-hub version` can show the previous version even though the workflow log printed `+ @ctaoist/pi-hub@<version>`. This is registry propagation, not a failed publish: do not re-run the workflow. Poll the registry until the version appears:
 
 ```bash
-curl -s https://registry.npmjs.org/@agegr%2Fpi-web/<version> | head -c 80   # JSON once it exists, "version not found" before
-npm view @agegr/pi-web dist-tags --registry https://registry.npmjs.org/
-npm view @agegr/pi-web versions --json --registry https://registry.npmjs.org/
+curl -s https://registry.npmjs.org/@ctaoist%2Fpi-hub/<version> | head -c 80   # JSON once it exists, "version not found" before
+npm view @ctaoist/pi-hub dist-tags --registry https://registry.npmjs.org/
+npm view @ctaoist/pi-hub versions --json --registry https://registry.npmjs.org/
 ```
 
 - The package carries a provenance statement linking it to the workflow run; the npm page shows it.
@@ -120,13 +120,13 @@ npm view @agegr/pi-web versions --json --registry https://registry.npmjs.org/
 If the workflow fails before `npm publish` succeeds, the version is still free:
 
 - A passing cause (npm or GitHub outage): `gh run rerun <run-id>`.
-- A code or config fix: land it on `main`, then move the tag to the fixed commit and push it again. This is safe only while npm does not have the version (check with the `curl` above):
+- A code or config fix: land it on `hub`, then move the tag to the fixed commit and push it again. This is safe only while npm does not have the version (check with the `curl` above):
 
 ```bash
 git tag -d v<version>
 git push origin :refs/tags/v<version>
 git tag -a v<version> -m "Release v<version>"
-git push origin main v<version>
+git push origin hub v<version>
 ```
 
 - An `ENEEDAUTH` or 404 on `npm publish` means the Trusted Publisher entry (step 0) does not match this repository and `publish.yml`.
@@ -139,10 +139,10 @@ If the tag went out before the release was ready (a commit still missing, say), 
 
 ```bash
 gh run cancel <run-id>
-curl -s https://registry.npmjs.org/@agegr%2Fpi-web/<version> | head -c 80   # still "version not found"
+curl -s https://registry.npmjs.org/@ctaoist%2Fpi-hub/<version> | head -c 80   # still "version not found"
 ```
 
-Then either move the tag once the fix is on `main`, as above, or release the next patch instead. The second leaves an unpublished `v<version>` tag on origin, as `v0.14.0` was: base the next release notes on the last version that was published, and say there that the skipped tag was never released.
+Then either move the tag once the fix is on `hub`, as above, or release the next patch instead. The second leaves an unpublished `v<version>` tag on origin, as `v0.14.0` was: base the next release notes on the last version that was published, and say there that the skipped tag was never released.
 
 ## 4. Generate Release Notes from Commits
 
@@ -158,7 +158,7 @@ Write the release notes from those commits, not from memory. Include both Chines
 
 - Check commands, flags and setting names against `README.md` and the code before writing them down.
 - Thank outside contributors by name: `git log --format='%h %an | %s' v<previous>..v<version>` lists authors, and the previous release's notes show the style.
-- Open with the install/upgrade command (`npm install -g @agegr/pi-web@latest`), as earlier releases did.
+- Open with the install/upgrade command (`npm install -g @ctaoist/pi-hub@latest`), as earlier releases did.
 - Write the notes to a file outside the repo (for example `NOTES=$(mktemp)`), or pass them through stdin as shown below. A `release-notes.md` in the repo root is an untracked file in the next release's `git status`.
 
 Suggested structure:
@@ -182,7 +182,7 @@ Suggested structure:
 
 ### 内部调整
 
-- 发布 npm 包 `@agegr/pi-web@<version>`。
+- 发布 npm 包 `@ctaoist/pi-hub@<version>`。
 
 ## English
 
@@ -202,7 +202,7 @@ Prepared from commits in `v<previous>..v<version>`.
 
 ### Internal
 
-- Published npm package `@agegr/pi-web@<version>`.
+- Published npm package `@ctaoist/pi-hub@<version>`.
 ```
 
 ## 5. Create or Update the GitHub Release
@@ -211,7 +211,7 @@ Create a new release:
 
 ```bash
 gh release create v<version> \
-  --repo agegr/pi-web \
+  --repo ctaoist/pi-hub \
   --verify-tag \
   --title "v<version>" \
   --notes-file "$NOTES"
@@ -221,14 +221,14 @@ If the release already exists and only the notes need updating:
 
 ```bash
 gh release edit v<version> \
-  --repo agegr/pi-web \
+  --repo ctaoist/pi-hub \
   --notes-file "$NOTES"
 ```
 
 You can avoid a temporary file by passing notes through stdin:
 
 ```bash
-gh release edit v<version> --repo agegr/pi-web --notes-file - <<'EOF'
+gh release edit v<version> --repo ctaoist/pi-hub --notes-file - <<'EOF'
 ## 中文
 
 ...
@@ -242,10 +242,10 @@ EOF
 ## 6. Final Verification
 
 ```bash
-gh release view v<version> --repo agegr/pi-web
+gh release view v<version> --repo ctaoist/pi-hub
 gh run list --workflow publish.yml --limit 1
-npm view @agegr/pi-web@<version> version --registry https://registry.npmjs.org/
-npm view @agegr/pi-web dist-tags --registry https://registry.npmjs.org/
+npm view @ctaoist/pi-hub@<version> version --registry https://registry.npmjs.org/
+npm view @ctaoist/pi-hub dist-tags --registry https://registry.npmjs.org/
 git status --short --branch
 git log --oneline --decorate -3
 git ls-remote --tags origin
@@ -254,12 +254,12 @@ git ls-remote --tags origin
 Check that the image can be pulled without signing in:
 
 ```bash
-T=$(curl -s "https://ghcr.io/token?scope=repository:agegr/pi-web:pull" | node -p 'JSON.parse(require("fs").readFileSync(0)).token')
+T=$(curl -s "https://ghcr.io/token?scope=repository:ctaoist/pi-hub:pull" | node -p 'JSON.parse(require("fs").readFileSync(0)).token')
 for tag in <version> <major>.<minor> latest; do
   printf '%s: ' "$tag"
   curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $T" \
     -H 'Accept: application/vnd.oci.image.index.v1+json' \
-    "https://ghcr.io/v2/agegr/pi-web/manifests/$tag"
+    "https://ghcr.io/v2/ctaoist/pi-hub/manifests/$tag"
 done
 ```
 
@@ -270,5 +270,5 @@ Expected:
 - npm exact version resolves and `latest` points at it (allow a few minutes, see step 3).
 - Every image tag answers `200`.
 - `git ls-remote --tags origin` shows no tag you did not mean to publish.
-- `main` is aligned with `origin/main`.
+- `hub` is aligned with `origin/hub`.
 - `HEAD` points at the release commit and `v<version>` tag.

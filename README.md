@@ -6,7 +6,7 @@ Local browser UI for the [pi coding agent](https://github.com/earendil-works/pi)
 
 **[Try the interactive demo →](https://agegr.github.io/pi-web/)** The real Pi Hub UI runs entirely in your browser, with sample sessions, files and models. There is nothing to install; replies are pre-written and no model is called.
 
-![Pi Hub displaying a pi session with structured Markdown, tool calls, and project navigation](https://raw.githubusercontent.com/agegr/pi-web/main/docs/screenshot2.png)
+![Pi Hub displaying a pi session with structured Markdown, tool calls, and project navigation](https://raw.githubusercontent.com/ctaoist/pi-hub/hub/docs/screenshot2.png)
 
 ## Features
 
@@ -22,35 +22,35 @@ Local browser UI for the [pi coding agent](https://github.com/earendil-works/pi)
 Pi Hub requires Node.js 22.19.0 or newer. Check your version with `node --version`, then run:
 
 ```bash
-npx @agegr/pi-web@latest
+npx @ctaoist/pi-hub@latest
 ```
 
 The CLI opens a browser after the server is ready. If it does not, open [http://127.0.0.1:30141](http://127.0.0.1:30141). Pi Hub listens only on `127.0.0.1` by default.
 
 If no model provider is configured yet, open the **Models** panel to sign in or add an API key.
 
-To install the `pi-web` command globally:
+To install the `pi-hub` command globally:
 
 ```bash
-npm install -g @agegr/pi-web@latest
-pi-web
+npm install -g @ctaoist/pi-hub@latest
+pi-hub
 ```
 
 Commands:
 
 ```bash
-pi-web version          # print the installed version
-pi-web status           # list running servers
-pi-web stop [--port N]  # stop a running server
-pi-web open [--port N]  # open a running server in the browser
-pi-web update [--check] # update a global npm install
+pi-hub version          # print the installed version
+pi-hub status           # list running servers
+pi-hub stop [--port N]  # stop a running server
+pi-hub open [--port N]  # open a running server in the browser
+pi-hub update [--check] # update a global npm install
 ```
 
-To update, run `pi-web stop`, then `pi-web update` (or run the same install command again). To uninstall, run `npm uninstall -g @agegr/pi-web`.
+To update, run `pi-hub stop`, then `pi-hub update` (or run the same install command again). To uninstall, run `npm uninstall -g @ctaoist/pi-hub`.
 
 ## Configuration
 
-For port and hostname, command-line options override the corresponding environment variables. Either `--no-open` or `PI_WEB_NO_OPEN=1` disables automatic browser opening. Run `pi-web --help` (or `-h`) to print startup options and exit without starting the server. Unknown options exit with an error.
+For port and hostname, command-line options override the corresponding environment variables. Either `--no-open` or `PI_WEB_NO_OPEN=1` disables automatic browser opening. Run `pi-hub --help` (or `-h`) to print startup options and exit without starting the server. Unknown options exit with an error.
 
 | Option or environment variable | Purpose | Default |
 | --- | --- | --- |
@@ -66,13 +66,13 @@ For port and hostname, command-line options override the corresponding environme
 | `PI_WEB_SHUTDOWN_DEADLINE_MS` | How long extensions get to handle `session_shutdown` before a closing session is disposed anyway, in milliseconds up to `2147483647`; `0`, invalid or out-of-range values use the default | `5000` (5 s) |
 | `PI_CODEMODE_MAX_WORKERS` | pi's limit on codemode scripts running at once, shared by every session and subagent in the server; pi's own default is `2`, and pi-web sets `8` when the variable is unset or empty. Each script may use up to 256 MB | `8` |
 
-Set `PI_WEB_APP_NAME` before starting the server (for example, `PI_WEB_APP_NAME='Work Pi' pi-web`). After changing it, restart the server to serve the new manifest; no rebuild is required. Updates to the name of an already installed PWA are managed by the browser and are not guaranteed to appear immediately. This does not change the page title or icons.
+Set `PI_WEB_APP_NAME` before starting the server (for example, `PI_WEB_APP_NAME='Work Pi' pi-hub`). After changing it, restart the server to serve the new manifest; no rebuild is required. Updates to the name of an already installed PWA are managed by the browser and are not guaranteed to appear immediately. This does not change the page title or icons.
 
 For example:
 
 ```bash
-pi-web --help
-pi-web -p 8080 -H 0.0.0.0 --no-open
+pi-hub --help
+pi-hub -p 8080 -H 0.0.0.0 --no-open
 ```
 
 ### Remote Access
@@ -80,7 +80,7 @@ pi-web -p 8080 -H 0.0.0.0 --no-open
 Binding to a non-loopback address exposes an agent that can execute high-privilege actions. On a trusted LAN, require a long random password:
 
 ```bash
-PI_WEB_PASSWORD='a-long-random-password' pi-web --hostname 0.0.0.0
+PI_WEB_PASSWORD='a-long-random-password' pi-hub --hostname 0.0.0.0
 ```
 
 Password authentication does not encrypt the connection. Do not expose Pi Hub over plain HTTP to the internet; use HTTPS through a trusted reverse proxy or a trusted VPN. If a reverse proxy sends an external hostname, add that exact name to `PI_WEB_ALLOWED_HOSTS`. This allow-list does not change the address Pi Hub binds to.
@@ -93,7 +93,7 @@ With many chats, terminals or file previews active at once, plain HTTP limits th
 
 ### Docker
 
-Each release publishes an image to `ghcr.io/agegr/pi-web`. See [Running Pi Hub in Docker](./docs/docker.md) for it, the Compose example and which volumes to keep.
+Each release publishes an image to `ghcr.io/ctaoist/pi-hub`. See [Running Pi Hub in Docker](./docs/docker.md) for it, the Compose example and which volumes to keep.
 
 ### HTTP Proxy
 
@@ -105,7 +105,7 @@ On macOS or Linux:
 HTTP_PROXY=http://127.0.0.1:7890 \
 HTTPS_PROXY=http://127.0.0.1:7890 \
 NO_PROXY=localhost,127.0.0.1 \
-npx @agegr/pi-web@latest
+npx @ctaoist/pi-hub@latest
 ```
 
 On Windows PowerShell:
@@ -114,7 +114,7 @@ On Windows PowerShell:
 $env:HTTP_PROXY = "http://127.0.0.1:7890"
 $env:HTTPS_PROXY = "http://127.0.0.1:7890"
 $env:NO_PROXY = "localhost,127.0.0.1"
-npx @agegr/pi-web@latest
+npx @ctaoist/pi-hub@latest
 ```
 
 ## Notes
