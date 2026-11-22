@@ -1,3 +1,4 @@
+import { startSkillReviewScheduler, stopSkillReviewScheduler } from "@/lib/skill-evolution-service";
 import { configureHttpDispatcher, readHttpIdleTimeoutMs } from "@/lib/http-dispatcher";
 import { closeAllAgentEventStreams } from "@/lib/agent-event-stream";
 import { applyCodemodeWorkerDefault } from "@/lib/codemode-workers";
@@ -18,6 +19,7 @@ export function registerNodeInstrumentation(): void {
   // the client disconnects, so close them here or the process never exits.
   const shutdownStreams = () => {
     stopSyncScheduler();
+    stopSkillReviewScheduler();
     closeAllAgentEventStreams();
   };
   process.on("SIGINT", shutdownStreams);
@@ -25,6 +27,7 @@ export function registerNodeInstrumentation(): void {
 
   installSyncUpgradeHandler();
   startSyncScheduler();
+  startSkillReviewScheduler();
 
   // Next evaluates a route's code on its first request, so the first
   // /api/sessions used to pay for importing the whole pi SDK, seconds on

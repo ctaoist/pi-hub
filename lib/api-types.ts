@@ -97,6 +97,7 @@ export interface SkillInfo {
     scope?: string;
   };
   install?: SkillInstallInfo;
+  protection?: import("./skill-evolution-types").SkillProtection;
 }
 
 export interface SkillsResponse {

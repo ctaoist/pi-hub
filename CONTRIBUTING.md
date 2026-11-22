@@ -9,6 +9,10 @@ Pi Hub is a light web front end for the [pi coding agent](https://github.com/ear
 - **Doing in a browser what a terminal does less well.** Browse sessions by project. Read files, diffs and tool output. Configure models, skills, agents, plugins and MCP servers through forms instead of hand-edited JSON. Use pi from a phone or from another machine on your network.
 - **Behaving like pi.** A session behaves the same whether it runs in Pi Hub or in the pi CLI. Extensions written for the CLI work in Pi Hub unchanged, and pi's TUI (`@earendil-works/pi-tui`) shows what an extension's request means.
 
+## Downstream exception: skill review
+
+Pi Hub's opt-in batch skill reviewer is a deliberately scoped native service, not a pi plugin. Its private configuration, scheduler and approval UI are the exception to the restrictions below; ordinary chats and pi extension APIs remain unchanged. See [ADR 0008](docs/adr/0008-skill-reviewer.md).
+
 ## Out of scope
 
 These are declined however well they are implemented:

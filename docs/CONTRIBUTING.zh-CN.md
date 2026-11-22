@@ -9,6 +9,10 @@ Pi Hub 是 [pi coding agent](https://github.com/earendil-works/pi) 的轻量网�
 - **做浏览器比终端更擅长的事。** 按项目浏览会话；查看文件、diff 和工具输出；用表单配置模型、技能、agent、插件和 MCP 服务器，不必手改 JSON；在手机上或局域网里的另一台机器上使用 pi。
 - **行为与 pi 一致。** 同一个会话在 Pi Hub 和 pi CLI 里表现相同；为 CLI 写的扩展在这里无需修改就能工作，扩展请求的含义以 pi 的 TUI（`@earendil-works/pi-tui`）为准。
 
+## 下游例外：技能提炼
+
+Pi Hub 的项目级技能提炼是默认关闭的原生服务，不作为 pi 插件交付。其私有配置、批次调度器和候选审批界面，是下述范围限制的明确例外；普通聊天和 pi 扩展 API 保持不变。详见 [ADR 0008](adr/0008-skill-reviewer.md)。
+
 ## 不在范围内
 
 以下内容无论实现得多好，都不会合并：

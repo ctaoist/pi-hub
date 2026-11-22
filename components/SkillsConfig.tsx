@@ -47,6 +47,8 @@ import {
 } from "./SettingsUi";
 import { itemsToSwitch, projectTrustReloadKey } from "./settings-ui-helpers";
 import { MarkdownBody } from "./MarkdownBody";
+import { SkillProtectionControl } from "./SkillProtectionControl";
+import { SkillEvolutionPanel } from "./SkillEvolutionPanel";
 
 type SkillScope = "global" | "project" | "path";
 type Translate = ReturnType<typeof useI18n>["t"];
@@ -147,6 +149,7 @@ function SkillDetail({
   updateError,
   onCheckUpdate,
   onUpdate,
+  onSkillsChanged,
 }: {
   skill: Skill;
   cwd: string;
@@ -159,6 +162,7 @@ function SkillDetail({
   updateError: string | null;
   onCheckUpdate: () => void;
   onUpdate: () => void;
+  onSkillsChanged: (skills: Skill[]) => void;
 }) {
   const { t } = useI18n();
   const label = sourceLabel(skill);
@@ -248,6 +252,8 @@ function SkillDetail({
           )}
         </div>
       </div>
+
+      <SkillProtectionControl cwd={cwd} skills={[skill]} onChanged={onSkillsChanged} />
 
       {skill.install?.skillsShUrl && (
         <ConfigField label={t("config.source")}>
@@ -655,6 +661,7 @@ export function SkillsConfig({
   const [bulkGroup, setBulkGroup] = useState<string | null>(null);
   const [groupStatus, setGroupStatus] = useState<{ group: string; error: string } | null>(null);
   const [addMode, setAddMode] = useState(false);
+  const [reviewMode, setReviewMode] = useState(false);
   const [updateStatuses, setUpdateStatuses] = useState<Record<string, SkillUpdateResult>>({});
   const [checkingUpdates, setCheckingUpdates] = useState<Set<string>>(new Set());
   const [checkingAll, setCheckingAll] = useState(false);
@@ -948,7 +955,7 @@ export function SkillsConfig({
                   }
                   const renderSkillRow = (skill: Skill) => {
                     const isSelected =
-                      !addMode && selected === skill.filePath;
+                      !addMode && !reviewMode && selected === skill.filePath;
                     const disabled = skill.disableModelInvocation;
                     return (
                       <ConfigSidebarItem
@@ -957,12 +964,14 @@ export function SkillsConfig({
                         onClick={() => {
                           setSelected(skill.filePath);
                           setAddMode(false);
+                          setReviewMode(false);
                         }}
                       >
                         <ConfigStatusDot active={!disabled} />
                         <ConfigSidebarText className={`is-grow${disabled ? " is-muted" : ""}`}>
                           {skill.name}
                         </ConfigSidebarText>
+                        {skill.protection?.locked && <span aria-label={t("review.lockSkill")} title={t("review.lockSkill")}>🔒</span>}
                         {(() => {
                           const key = updateKey(skill);
                           const status = key ? updateStatuses[key] : undefined;
@@ -1005,9 +1014,12 @@ export function SkillsConfig({
                 })()
               )}
             </ConfigSidebarList>
+            <ConfigListAction active={reviewMode} onClick={() => { setReviewMode(true); setAddMode(false); }}>
+              {t("review.title")}
+            </ConfigListAction>
             {/* Add skill button */}
             <ConfigListAction
-                onClick={() => setAddMode(true)}
+                onClick={() => { setAddMode(true); setReviewMode(false); }}
                 active={addMode}
               >
                  {t("i18n.addSkill")}
@@ -1017,7 +1029,9 @@ export function SkillsConfig({
           {/* Right: detail or add panel */}
           <ConfigDetail>
             <ConfigDetailStack className="is-fill">
-              {addMode ? (
+              {reviewMode ? (
+                <SkillEvolutionPanel key={cwd} cwd={cwd} skills={skills} onSkillsChanged={setSkills} />
+              ) : addMode ? (
               <AddSkillPanel
                 cwd={cwd}
                 projectResourcesLoaded={projectResourcesLoaded}
@@ -1059,6 +1073,7 @@ export function SkillsConfig({
                 updateError={updateError}
                 onCheckUpdate={() => void checkForUpdates(selectedSkill)}
                 onUpdate={() => void updateInstalledSkill(selectedSkill)}
+                onSkillsChanged={setSkills}
               />
               ) : (
                 <ConfigEmptyState>{t("i18n.selectSkill")}</ConfigEmptyState>

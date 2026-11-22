@@ -6,6 +6,7 @@ import { existsSync, realpathSync, writeFileSync } from "fs";
 import { resolve } from "path";
 import { isDeepStrictEqual } from "util";
 import { validateAgentImages } from "./image-attachments";
+import { recordReviewTurn } from "./skill-evolution-evidence";
 import { EXTENSION_REPORTED_CODE } from "./agent-client";
 import { cwdMissingError } from "./missing-cwd";
 import { invalidateModelsCache } from "./models-cache";
@@ -795,6 +796,8 @@ export class AgentSessionWrapper {
     // A subagent of this session is still at work: each report starts a run here, and the run
     // after the last one is the end of the task (#1434).
     if (hasUnsettledSubagentRun(this.sessionId)) return;
+    // Records evidence only; the Hub's batch scheduler owns model dispatch.
+    recordReviewTurn(this.cwd, this.sessionId, () => this.inner.sessionManager.getBranch());
     try {
       this.onAgentRunComplete?.(this.sessionId, this.inner.sessionManager.getSessionName());
     } catch (error) {
