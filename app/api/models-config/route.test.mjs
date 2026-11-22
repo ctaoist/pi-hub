@@ -31,6 +31,21 @@ function put(body) {
   });
 }
 
+/** What models.json keeps once literal API keys move to auth.json. */
+function stripped(config) {
+  const next = structuredClone(config);
+  for (const provider of Object.values(next.providers ?? {})) delete provider.apiKey;
+  return next;
+}
+
+async function storedCredentials() {
+  try {
+    return JSON.parse(await readFile(join(testAgentDir, "auth.json"), "utf8"));
+  } catch {
+    return {};
+  }
+}
+
 test("a models.json with a syntax error is reported instead of read as empty, and a save cannot replace it", async () => {
   const original = '{ "providers": { "acme": { "models": [ } } }';
   await writeFile(modelsPath, original);
@@ -84,6 +99,43 @@ test("saved login-model context overrides reach the SDK; resetting restores the 
   assert.equal(await readFile(authPath, "utf8"), credentials);
 });
 
+test("provider Base URL saves reach the built-in SDK models without replacing credentials or the catalog", async () => {
+  const { ModelRuntime } = await import("@earendil-works/pi-coding-agent");
+  const { collectProviderListingInputs } = await jiti.import("../../../lib/provider-listing-runtime.ts");
+  const authPath = join(testAgentDir, "auth.json");
+  const credentials = JSON.stringify({ openai: { type: "api_key", key: "TEST_ONLY_KEY" } });
+  await writeFile(authPath, credentials);
+  const options = { authPath, modelsPath, modelsStorePath: join(testAgentDir, "models-store.json"), refreshOnCreate: false };
+  const baseline = await ModelRuntime.create({ ...options, modelsPath: null });
+  const initial = baseline.getModels().filter((model) => model.provider === "openai");
+  assert.ok(initial.length > 0);
+  const id = initial[0].id;
+  const config = { providers: { openai: {
+    baseUrl: "  https://gateway.invalid/custom/path  ", modelOverrides: { [id]: { contextWindow: 123456 } },
+  } } };
+  assert.equal((await PUT(put(config))).status, 200);
+  const saved = await (await GET()).json();
+  assert.equal(saved.providers.openai.baseUrl, "https://gateway.invalid/custom/path");
+  const runtime = await ModelRuntime.create(options);
+  const models = runtime.getModels().filter((model) => model.provider === "openai");
+  assert.deepEqual(models.map((model) => model.id), initial.map((model) => model.id));
+  assert.ok(models.every((model) => model.baseUrl === "https://gateway.invalid/custom/path"));
+  assert.equal(runtime.getModel("openai", id).contextWindow, 123456);
+  const row = (await collectProviderListingInputs(runtime)).find((provider) => provider.id === "openai");
+  assert.equal(row.baseUrl, "https://gateway.invalid/custom/path");
+  assert.equal(JSON.stringify(row).includes("TEST_ONLY_KEY"), false);
+
+  config.providers.openai.baseUrl = "";
+  assert.equal((await PUT(put(config))).status, 200);
+  assert.deepEqual((await (await GET()).json()).providers.openai, { modelOverrides: config.providers.openai.modelOverrides });
+  const reset = await ModelRuntime.create(options);
+  assert.equal(reset.getModel("openai", id).baseUrl, baseline.getModel("openai", id).baseUrl);
+  assert.equal(reset.getModel("openai", id).contextWindow, 123456);
+  assert.equal(await readFile(authPath, "utf8"), credentials);
+  assert.equal((await PUT(put({ providers: { openai: { baseUrl: " " } } }))).status, 200);
+  assert.deepEqual(await (await GET()).json(), { providers: {} });
+});
+
 test("a hand-edited override pi accepts does not block saving an unrelated provider", async () => {
   const { ModelRuntime } = await import("@earendil-works/pi-coding-agent");
   const config = { providers: {
@@ -99,7 +151,7 @@ test("a hand-edited override pi accepts does not block saving an unrelated provi
   edited.providers.relay.models.push({ id: "b" });
   const response = await PUT(put(edited));
   assert.equal(response.status, 200);
-  assert.deepEqual(await (await GET()).json(), edited);
+  assert.deepEqual(await (await GET()).json(), stripped(edited));
 });
 
 test("model-level endpoints round-trip through Save, override only that model, and can return to inheritance", async () => {
@@ -113,7 +165,7 @@ test("model-level endpoints round-trip through Save, override only that model, a
   } } };
   const options = { authPath: join(testAgentDir, "auth.json"), modelsPath, modelsStorePath: join(testAgentDir, "models-store.json"), refreshOnCreate: false };
   assert.equal((await PUT(put(config))).status, 200);
-  assert.deepEqual(await (await GET()).json(), config);
+  assert.deepEqual(await (await GET()).json(), stripped(config));
   const runtime = await ModelRuntime.create(options);
   assert.equal(runtime.getError(), undefined);
   assert.equal(runtime.getModel("relay", "one").baseUrl, "https://synthetic.invalid/v1");
@@ -121,7 +173,7 @@ test("model-level endpoints round-trip through Save, override only that model, a
   assert.equal(runtime.getModel("relay", "two").api, "anthropic-messages");
   delete config.providers.relay.models[0].baseUrl;
   assert.equal((await PUT(put(config))).status, 200);
-  assert.deepEqual(await (await GET()).json(), config);
+  assert.deepEqual(await (await GET()).json(), stripped(config));
   const reset = await ModelRuntime.create(options);
   assert.equal(reset.getModel("relay", "one").baseUrl, "https://synthetic.invalid");
   assert.equal(reset.getModel("relay", "one").api, "openai-responses");
@@ -143,7 +195,61 @@ test("a provider entry pi would not load is refused, and deleting it lets Save t
 
   delete edited.providers["new-provider"];
   assert.equal((await PUT(put(edited))).status, 200);
-  assert.deepEqual(await (await GET()).json(), edited);
+  assert.deepEqual(await (await GET()).json(), stripped(edited));
+});
+
+test("a literal API key saves to auth.json and leaves the provider definition in models.json", async () => {
+  const { ModelRuntime } = await import("@earendil-works/pi-coding-agent");
+  const config = { providers: {
+    gateway: {
+      baseUrl: "https://gateway.invalid/v1", api: "openai-completions", apiKey: "  sk-panel-typed  ",
+      headers: { "x-tenant": "one" }, models: [{ id: "fast" }],
+    },
+    "env-provider": { baseUrl: "https://env.invalid", api: "openai-completions", apiKey: "${ENV_PROVIDER_KEY}", models: [{ id: "m" }] },
+  } };
+  const response = await PUT(put(config));
+  assert.equal(response.status, 200);
+  assert.deepEqual((await response.json()).migratedApiKeys, ["gateway"]);
+
+  // models.json keeps the definition; the key is pi's stored credential now.
+  assert.deepEqual(await (await GET()).json(), { providers: {
+    gateway: { baseUrl: "https://gateway.invalid/v1", api: "openai-completions", headers: { "x-tenant": "one" }, models: [{ id: "fast" }] },
+    "env-provider": config.providers["env-provider"],
+  } });
+  assert.deepEqual((await storedCredentials()).gateway, { type: "api_key", key: "sk-panel-typed" });
+
+  const options = { authPath: join(testAgentDir, "auth.json"), modelsPath, modelsStorePath: join(testAgentDir, "models-store.json"), refreshOnCreate: false };
+  const runtime = await ModelRuntime.create(options);
+  assert.equal(runtime.getError(), undefined);
+  assert.equal(runtime.getProvider("gateway").id, "gateway");
+  // The availability snapshot is what records a stored credential (as
+  // getModelRuntimeWithExtensions()'s offline refresh does for the panel).
+  await runtime.refresh({ allowNetwork: false });
+  assert.deepEqual(runtime.getProviderAuthStatus("gateway"), { configured: true, source: "stored" });
+  const auth = await runtime.getAuth(runtime.getModel("gateway", "fast"));
+  assert.equal(auth.auth.apiKey, "sk-panel-typed");
+
+  // A later save without the field keeps the stored key and confirms the display.
+  const reopened = await (await GET()).json();
+  assert.equal((await PUT(put(reopened))).status, 200);
+  assert.deepEqual((await storedCredentials()).gateway, { type: "api_key", key: "sk-panel-typed" });
+});
+
+test("a provider entry that held only a key is dropped, since pi refuses an empty entry", async () => {
+  const config = { providers: { "key-only": { apiKey: "sk-only" }, kept: { models: [{ id: "a" }], apiKey: "sk-kept" } } };
+  const response = await PUT(put(config));
+  assert.equal(response.status, 200);
+  assert.deepEqual(await (await GET()).json(), { providers: { kept: { models: [{ id: "a" }] } } });
+  assert.deepEqual((await storedCredentials())["key-only"], { type: "api_key", key: "sk-only" });
+});
+
+test("a refused save leaves auth.json and models.json as they were", async () => {
+  const before = await readFile(modelsPath, "utf8");
+  const credentialsBefore = JSON.stringify(await storedCredentials());
+  const response = await PUT(put({ providers: { relay: { apiKey: "sk-never-stored" , models: [{ id: "a" }] }, broken: {} } }));
+  assert.equal(response.status, 400);
+  assert.equal(await readFile(modelsPath, "utf8"), before);
+  assert.equal(JSON.stringify(await storedCredentials()), credentialsBefore);
 });
 
 test("a symlinked models.json keeps its link: Save writes through it to its target", async () => {

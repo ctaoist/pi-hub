@@ -6,6 +6,8 @@ import { useI18n } from "@/hooks/useI18n";
 import type { ModelCatalogPreset, ModelCatalogRecommendation } from "@/lib/model-catalog";
 import type { DiscoveredModel } from "@/lib/model-discovery";
 import { ContextWindowError, normalizeContextWindowOverrides, withContextWindowOverride } from "@/lib/model-context";
+import { isManagedProviderOverride, normalizeProviderBaseUrls, withProviderBaseUrl } from "@/lib/model-provider-url";
+import { isLiteralApiKey } from "@/lib/api-key-migration";
 import { checkProviderEntries, ProviderEntryError, type ProviderEntryProblem } from "@/lib/model-provider-check";
 import { checkImageMaxBytes, DEFAULT_IMAGE_MAX_BYTES, formatImageBytes, ImageMaxBytesError, imageMaxBytes, parseImageMaxBytes, withImageMaxBytes } from "@/lib/model-image-limits";
 import type { ModelContextSettings } from "./ModelContextWindow";
@@ -193,15 +195,6 @@ function customSelectionExists(config: ModelsJson, selection: Selection): boolea
   return Boolean(config.providers?.[selection.providerName]?.models?.[selection.index]);
 }
 
-/**
- * An entry holding only model overrides belongs to its managed provider. An
- * empty `modelOverrides` overrides nothing and pi refuses it, so that entry
- * stays a listed custom provider Save can select to be deleted (#1353).
- */
-function isOverridesOnly(entry: ProviderEntry): boolean {
-  return Object.keys(entry).length === 1 && Object.keys(entry.modelOverrides ?? {}).length > 0;
-}
-
 const API_OPTIONS = ["openai-completions", "openai-responses", "anthropic-messages", "google-generative-ai"] as const;
 
 const PROVIDER_ENTRY_MESSAGES: Record<ProviderEntryProblem, string> = {
@@ -241,6 +234,7 @@ function SecretTextInput({
   autoComplete = "off",
   spellCheck = false,
   enterKeyHint,
+  ariaLabel,
   style,
 }: {
   value: string;
@@ -251,6 +245,8 @@ function SecretTextInput({
   autoComplete?: string;
   spellCheck?: boolean;
   enterKeyHint?: React.HTMLAttributes<HTMLInputElement>["enterKeyHint"];
+  /** The visible label is a span, not a <label>: name the field where it has one. */
+  ariaLabel?: string;
   style?: React.CSSProperties;
 }) {
   const [visible, setVisible] = useState(false);
@@ -267,6 +263,7 @@ function SecretTextInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={onKeyDown}
+        aria-label={ariaLabel}
         placeholder={placeholder}
         style={{ ...inputStyle, paddingRight: 34, fontFamily: mono ? "var(--font-mono)" : "inherit" }}
         autoComplete={autoComplete}
@@ -345,13 +342,36 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 // ── Provider detail ───────────────────────────────────────────────────────────
 
-function ProviderDetail({ name, editingName, fallbackLabel, provider, onChange, onEditingNameChange, onRename, onDelete, onAddModels, enabledModels }: {
+function ProviderDetail({ name, editingName, fallbackLabel, provider, onChange, onEditingNameChange, onRename, onDelete, onAddModels, enabledModels, credentialType, onCredentialChange }: {
   name: string; editingName: string; fallbackLabel: string; provider: ProviderEntry;
   onChange: (p: ProviderEntry) => void; onEditingNameChange: (n: string) => void;
   onRename: (n: string) => void; onDelete: () => void;
   onAddModels: (models: DiscoveredModel[]) => void; enabledModels: EnabledModelsController;
+  /** What auth.json holds for this provider: its key is not echoed back. */
+  credentialType?: "api_key" | "oauth";
+  onCredentialChange: () => void;
 }) {
   const { t } = useI18n();
+  const [keyRemoving, setKeyRemoving] = useState(false);
+  const [keyError, setKeyError] = useState<string | null>(null);
+  const storedKey = credentialType === "api_key";
+  // `$ENV` / `!command` is a reference pi resolves, not a secret: it stays in
+  // models.json and is edited in place. A literal key is saved to auth.json.
+  const keyReference = provider.apiKey !== undefined && !isLiteralApiKey(provider.apiKey);
+  const removeStoredKey = async () => {
+    setKeyRemoving(true);
+    setKeyError(null);
+    try {
+      const res = await fetch(`/api/auth/api-key/${encodeURIComponent(name)}`, { method: "DELETE" });
+      const data = await res.json() as { error?: string };
+      if (!res.ok || data.error) setKeyError(data.error ?? `HTTP ${res.status}`);
+      else onCredentialChange();
+    } catch (error) {
+      setKeyError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setKeyRemoving(false);
+    }
+  };
   const [discoveryState, setDiscoveryState] = useState<ModelDiscoveryState>({ phase: "idle" });
   const [discoveryQuery, setDiscoveryQuery] = useState("");
   const [selectedModelIds, setSelectedModelIds] = useState<string[]>([]);
@@ -470,8 +490,35 @@ function ProviderDetail({ name, editingName, fallbackLabel, provider, onChange, 
       </Field>
 
       <Field label="API Key">
-        <SecretTextInput value={provider.apiKey ?? ""} onChange={(v) => set("apiKey", v || undefined)}
-          placeholder={t("models.apiKeyPlaceholder")} mono />
+        {keyReference ? (
+          <TextInput value={provider.apiKey ?? ""} onChange={(v) => set("apiKey", v || undefined)}
+            placeholder="$MY_PROVIDER_KEY" mono />
+        ) : (
+          <>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <SecretTextInput value={provider.apiKey ?? ""} onChange={(v) => set("apiKey", v || undefined)}
+                  placeholder={storedKey ? t("models.replaceApiKey") : t("models.apiKeyPlaceholder")} mono
+                  ariaLabel={t("models.apiKeyField")} />
+              </div>
+              {storedKey && (
+                <button
+                  type="button"
+                  onClick={removeStoredKey}
+                  disabled={keyRemoving}
+                  style={{ flexShrink: 0, height: 30, padding: "0 10px", background: "none", border: "1px solid rgba(239,68,68,0.35)", borderRadius: 5, color: "#ef4444", cursor: keyRemoving ? "not-allowed" : "pointer", fontSize: 11 }}
+                >
+                  {t("models.removeKey")}
+                </button>
+              )}
+            </div>
+            <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--text-dim)" }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: storedKey ? "#4ade80" : "var(--border)", display: "inline-block" }} />
+              {storedKey ? t("models.apiKeyStored") : credentialType === "oauth" ? t("models.oauthSignedIn") : t("models.apiKeyMissing")}
+            </span>
+            {keyError && <span style={{ fontSize: 11, color: "#f87171" }}>{keyError}</span>}
+          </>
+        )}
       </Field>
 
       <Field label="API">
@@ -1388,9 +1435,10 @@ function ModelDetail({
 
 // ── OAuth detail ──────────────────────────────────────────────────────────────
 
-function OAuthDetail({ provider, onRefresh, enabledModels, contextSettings }: {
+function OAuthDetail({ provider, onRefresh, enabledModels, contextSettings, baseUrlField }: {
   provider: OAuthProvider; onRefresh: () => void; enabledModels: EnabledModelsController;
   contextSettings: ModelContextSettings;
+  baseUrlField: React.ReactNode;
 }) {
   const [loginState, setLoginState] = useState<OAuthLoginState>({ phase: "idle" });
   const { t } = useI18n();
@@ -1637,6 +1685,8 @@ function OAuthDetail({ provider, onRefresh, enabledModels, contextSettings }: {
         )}
       </div>
 
+      {baseUrlField}
+
       <ProviderUsageSummary providerId={provider.id} enabled={provider.loggedIn} />
 
       {provider.loggedIn && <EnabledModelsSection providerId={provider.id} controller={enabledModels} contextSettings={contextSettings} />}
@@ -1649,9 +1699,10 @@ function OAuthDetail({ provider, onRefresh, enabledModels, contextSettings }: {
 // pi's default router address (`/login llama.cpp`, docs/llama-cpp.md).
 const DEFAULT_LLAMA_ROUTER_URL = "http://127.0.0.1:8080";
 
-function ApiKeyDetail({ provider, onRefresh, enabledModels, contextSettings }: {
+function ApiKeyDetail({ provider, onRefresh, enabledModels, contextSettings, baseUrlField }: {
   provider: ApiKeyProvider; onRefresh: () => void; enabledModels: EnabledModelsController;
   contextSettings: ModelContextSettings;
+  baseUrlField: React.ReactNode;
 }) {
   const llama = provider.id === LLAMA_CPP_PROVIDER_ID;
   const [serverUrl, setServerUrl] = useState(llama && !provider.configured ? DEFAULT_LLAMA_ROUTER_URL : "");
@@ -1789,6 +1840,8 @@ function ApiKeyDetail({ provider, onRefresh, enabledModels, contextSettings }: {
       </div>
 
       {error && <p style={{ margin: 0, fontSize: 12, color: "#f87171" }}>{error}</p>}
+
+      {baseUrlField}
 
       <ProviderUsageSummary providerId={provider.id} enabled={provider.configured} />
 
@@ -1972,6 +2025,9 @@ export function ModelsConfig({ onClose, embedded = false, cwd = null }: {
   const [apiKeyProviders, setApiKeyProviders] = useState<ApiKeyProvider[]>([]);
   /** Runtime display names of every provider, including ones with no chat models. */
   const [providerNames, setProviderNames] = useState<Record<string, string>>({});
+  const [providerBaseUrls, setProviderBaseUrls] = useState<Record<string, string>>({});
+  /** Credential kind auth.json holds per provider, never the key itself. */
+  const [credentialTypes, setCredentialTypes] = useState<Record<string, "api_key" | "oauth">>({});
   /** Each provider's models.json `name` as saved, which pi also reports as its runtime name. */
   const [savedNames, setSavedNames] = useState<Map<string, string>>(() => new Map());
   /** Set once the provider lists have answered; until then an overrides-only entry may be a managed provider's. */
@@ -2001,10 +2057,12 @@ export function ModelsConfig({ onClose, embedded = false, cwd = null }: {
   /** Resolves true once the lists and runtime names have been replaced. */
   const refreshAuthProviders = useCallback(() => fetch("/api/auth/providers")
     .then((r) => r.json())
-    .then((d: { oauthProviders?: OAuthProvider[]; apiKeyProviders?: ApiKeyProvider[]; providerNames?: Record<string, string> }) => {
+    .then((d: { oauthProviders?: OAuthProvider[]; apiKeyProviders?: ApiKeyProvider[]; providerNames?: Record<string, string>; providerBaseUrls?: Record<string, string>; providerCredentialTypes?: Record<string, "api_key" | "oauth"> }) => {
       if (Array.isArray(d.oauthProviders)) setOauthProviders(d.oauthProviders);
       if (Array.isArray(d.apiKeyProviders)) setApiKeyProviders(d.apiKeyProviders);
       setProviderNames(d.providerNames ?? {});
+      setProviderBaseUrls(d.providerBaseUrls ?? {});
+      setCredentialTypes(d.providerCredentialTypes ?? {});
       return true;
     })
     .catch(() => false)
@@ -2044,10 +2102,13 @@ export function ModelsConfig({ onClose, embedded = false, cwd = null }: {
     if (selection?.type !== "provider") return;
     const entry = config.providers?.[selection.name];
     // Clearing a saved display name leaves only overrides: keep the panel until the name is saved away.
-    if (!entry || !isOverridesOnly(entry) || savedNames.has(selection.name)) return;
-    if (oauthProviders.some((provider) => provider.id === selection.name)) {
+    if (!entry || !isManagedProviderOverride(entry) || savedNames.has(selection.name)) return;
+    const oauth = oauthProviders.find((provider) => provider.id === selection.name);
+    const apiKey = apiKeyProviders.find((provider) => provider.id === selection.name);
+    // A dual-auth provider belongs to its configured method, not the first list.
+    if (oauth?.loggedIn || (!apiKey && oauth)) {
       setSelection({ type: "oauth", providerId: selection.name });
-    } else if (apiKeyProviders.some((provider) => provider.id === selection.name)) {
+    } else if (apiKey) {
       setSelection({ type: "apikey", providerId: selection.name });
     }
   }, [apiKeyProviders, config.providers, oauthProviders, savedNames, selection]);
@@ -2065,6 +2126,29 @@ export function ModelsConfig({ onClose, embedded = false, cwd = null }: {
       }
     },
   });
+
+  const providerBaseUrlField = (providerId: string) => (
+    <Field label="Base URL">
+      <input
+        type="text"
+        inputMode="url"
+        aria-label="Base URL"
+        aria-describedby="provider-base-url-help"
+        autoComplete="off"
+        spellCheck={false}
+        value={config.providers?.[providerId]?.baseUrl ?? providerBaseUrls[providerId] ?? ""}
+        onChange={(event) => {
+          setConfig((current) => withProviderBaseUrl(current, providerId, event.target.value));
+          setSavedOk(false);
+          setSaveError(null);
+        }}
+        disabled={loading || saving || loadError !== null}
+        placeholder="https://api.example.com/v1"
+        style={{ ...inputStyle, fontFamily: "var(--font-mono)" }}
+      />
+      <span id="provider-base-url-help" style={{ fontSize: 11, color: "var(--text-dim)" }}>{t("models.providerBaseUrlHelp")}</span>
+    </Field>
+  );
 
   const addCustomProvider = useCallback(() => {
     let finalName = "new-provider";
@@ -2264,7 +2348,7 @@ export function ModelsConfig({ onClose, embedded = false, cwd = null }: {
       draft = renamed;
     }
     try {
-      draft = normalizeContextWindowOverrides(draft);
+      draft = normalizeProviderBaseUrls(normalizeContextWindowOverrides(draft));
       checkProviderEntries(draft);
       checkImageMaxBytes(draft);
       const res = await fetch("/api/models-config", {
@@ -2272,11 +2356,24 @@ export function ModelsConfig({ onClose, embedded = false, cwd = null }: {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(draft),
       });
-      const d = await res.json() as { success?: boolean; error?: string };
+      const d = await res.json() as { success?: boolean; error?: string; migratedApiKeys?: string[] };
       if (!res.ok || d.error) setSaveError(d.error ?? `HTTP ${res.status}`);
       else {
         setSavedOk(true);
         setTimeout(() => setSavedOk(false), 2000);
+        // A literal key is stored in auth.json now: drop it from the draft, so the
+        // field reads as a stored key, and from the saved shape, so a later save
+        // or the runtime-name refresh does not carry it back into models.json.
+        const migrated = Array.isArray(d.migratedApiKeys) ? d.migratedApiKeys : [];
+        for (const providerId of migrated) {
+          const entry = draft.providers?.[providerId];
+          if (!entry) continue;
+          const rest = { ...entry };
+          delete rest.apiKey;
+          if (Object.keys(rest).length > 0) draft.providers![providerId] = rest;
+          else delete draft.providers![providerId];
+        }
+        if (migrated.length > 0) setConfig((current) => current === config ? draft : current);
         // models.json just changed under the switches: providers may have been
         // renamed, models added, deleted or renamed. Re-verify the stored
         // patterns against the new catalog and re-read.
@@ -2286,10 +2383,36 @@ export function ModelsConfig({ onClose, embedded = false, cwd = null }: {
         savedModelIdsRef.current = savedModelIds(draft);
         renamesRef.current.clear();
         enabledModels.resync(renames, modelRenames);
+        // auth.json files a credential by provider id, so a renamed provider's key
+        // has to follow it; the key typed for the new id in this same save wins.
+        if (renames.length > 0) {
+          try {
+            const res = await fetch("/api/models-config/credential", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ renames }),
+            });
+            const moved = await res.json() as { failed?: { from: string; to: string; error: string }[]; error?: string };
+            const failures = res.ok ? moved.failed ?? [] : [{ from: "", to: "", error: moved.error ?? `HTTP ${res.status}` }];
+            if (failures.length > 0) {
+              setSaveError(failures.map((entry) => entry.from
+                ? `${entry.from} → ${entry.to}: ${entry.error}`
+                : entry.error).join("\n"));
+            }
+          } catch (error) {
+            setSaveError(error instanceof Error ? error.message : String(error));
+          }
+        }
         // Runtime names follow the saved ids and `name`s. Until they arrive, the old runtime
         // name still equals the old saved `name`, so both move together.
         const nextSavedNames = savedProviderNames(draft);
-        void refreshAuthProviders().then((refreshed) => { if (refreshed) setSavedNames(nextSavedNames); });
+        void refreshAuthProviders().then((refreshed) => {
+          if (refreshed) {
+            setSavedNames(nextSavedNames);
+            // Normalize only the draft we saved, not edits typed while the refresh ran.
+            setConfig((current) => current === config || current === draft ? draft : current);
+          }
+        });
       }
     } catch (e) {
       if (e instanceof ProviderEntryError) {
@@ -2304,7 +2427,7 @@ export function ModelsConfig({ onClose, embedded = false, cwd = null }: {
   }, [applyProviderRename, config, enabledModels, loadError, providerNameDraft, refreshAuthProviders, t]);
 
   const providers = Object.entries(config.providers ?? {}).filter(([id, entry]) => {
-    if (!isOverridesOnly(entry) || savedNames.has(id)) return true;
+    if (!isManagedProviderOverride(entry) || savedNames.has(id)) return true;
     const managed = oauthProviders.some((provider) => provider.id === id) || apiKeyProviders.some((provider) => provider.id === id);
     return authListed && !managed;
   });
@@ -2330,12 +2453,12 @@ export function ModelsConfig({ onClose, embedded = false, cwd = null }: {
     if (selection.type === "oauth") {
       const p = oauthProviders.find((p) => p.id === selection.providerId);
       if (!p) return null;
-      return <OAuthDetail key={p.id} provider={p} onRefresh={refreshAuthProviders} enabledModels={enabledModels} contextSettings={contextSettings(p.id)} />;
+      return <OAuthDetail key={p.id} provider={p} onRefresh={refreshAuthProviders} enabledModels={enabledModels} contextSettings={contextSettings(p.id)} baseUrlField={providerBaseUrlField(p.id)} />;
     }
     if (selection.type === "apikey") {
       const p = apiKeyProviders.find((p) => p.id === selection.providerId);
       if (!p) return null;
-      return <ApiKeyDetail key={p.id} provider={p} onRefresh={refreshAuthProviders} enabledModels={enabledModels} contextSettings={contextSettings(p.id)} />;
+      return <ApiKeyDetail key={p.id} provider={p} onRefresh={refreshAuthProviders} enabledModels={enabledModels} contextSettings={contextSettings(p.id)} baseUrlField={p.id === LLAMA_CPP_PROVIDER_ID ? null : providerBaseUrlField(p.id)} />;
     }
     if (selection.type === "provider") {
       const provider = config.providers?.[selection.name];
@@ -2354,6 +2477,8 @@ export function ModelsConfig({ onClose, embedded = false, cwd = null }: {
           onDelete={() => deleteProvider(selection.name)}
           onAddModels={(models) => addDiscoveredModels(selection.name, models)}
           enabledModels={enabledModels}
+          credentialType={credentialTypes[selection.name]}
+          onCredentialChange={() => { void refreshAuthProviders(); }}
         />
       );
     }

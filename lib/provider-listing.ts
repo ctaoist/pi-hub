@@ -33,6 +33,8 @@ export interface ProviderListingInput {
   id: string;
   /** Provider display name (`provider.name`). */
   name: string;
+  /** Public endpoint from the composed provider, never resolved credentials. */
+  baseUrl?: string;
   /** True when the provider declares an API-key login method. */
   hasApiKeyLogin: boolean;
   /** True when the provider declares an OAuth login method. */
@@ -43,6 +45,12 @@ export interface ProviderListingInput {
   status: { configured: boolean; source?: string };
   /** Type of the credential stored for this provider, when there is one. */
   credentialType?: ProviderCredentialType;
+  /**
+   * models.json defines this provider itself (more than managed overrides), so
+   * Settings › Models shows it as a custom provider row: its models and its key
+   * are managed there, not in the provider lists.
+   */
+  definedInModelsJson?: boolean;
   modelCount: number;
 }
 
@@ -80,9 +88,11 @@ function dedupeById(providers: readonly ProviderListingInput[]): ProviderListing
  * Providers that can be authenticated with an API key.
  *
  * Custom `models.json` providers are excluded because the Models panel already
- * renders them from `models.json` itself. A provider currently authenticated
- * with an OAuth credential is reported as not configured here, so it is listed
- * once — in the OAuth list — instead of twice.
+ * renders them from `models.json` itself — their key is stored in auth.json now
+ * (`lib/api-key-migration.ts`), so the stored credential alone no longer tells
+ * them apart. A provider currently authenticated with an OAuth credential is
+ * reported as not configured here, so it is listed once — in the OAuth list —
+ * instead of twice.
  */
 export function buildApiKeyProviderList(
   providers: readonly ProviderListingInput[],
@@ -90,6 +100,7 @@ export function buildApiKeyProviderList(
   const result: ApiKeyProviderListing[] = [];
   for (const provider of dedupeById(providers)) {
     if (!provider.hasApiKeyLogin) continue;
+    if (provider.definedInModelsJson) continue;
     if (provider.status.source && CUSTOM_PROVIDER_SOURCES.has(provider.status.source)) continue;
 
     const configured = provider.status.configured && provider.credentialType !== "oauth";

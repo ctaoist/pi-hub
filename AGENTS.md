@@ -92,7 +92,8 @@ app/api/
   models/enabled/route.ts          GET/PUT enabledModels switches
   models/default/route.ts          PUT default model / reasoning level for new sessions
   models/refresh/route.ts          POST fetch provider catalogs from pi.dev on demand
-  models-config/route.ts           GET/PUT ~/.pi/agent/models.json
+  models-config/route.ts           GET/PUT ~/.pi/agent/models.json (a literal API key moves to auth.json on save)
+  models-config/credential/route.ts POST move provider credentials after a provider rename
   models-config/catalog/route.ts   GET models.dev pricing presets
   models-config/discover/route.ts  POST fetch a configured provider's upstream model list
   models-config/test/route.ts      POST test a configured model/provider

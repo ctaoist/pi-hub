@@ -88,6 +88,29 @@ export function storeProviderCredential(
 }
 
 /**
+ * Moves a provider's stored credential to a renamed provider id: a models.json
+ * provider rename does not touch auth.json. A credential already stored under
+ * the new id (a key typed in the same save) stays, being the newer one.
+ *
+ * Returns whether a credential moved; a provider with none is not an error.
+ */
+export async function moveStoredCredential(
+  from: string,
+  to: string,
+  authPath = join(getAgentDir(), "auth.json"),
+): Promise<boolean> {
+  if (!from || !to || from === to) return false;
+  return updateStoredCredentials(authPath, (credentials) => {
+    if (!Object.hasOwn(credentials, from) || Object.hasOwn(credentials, to)) {
+      return { result: false, changed: false };
+    }
+    credentials[to] = credentials[from];
+    delete credentials[from];
+    return { result: true, changed: true };
+  });
+}
+
+/**
  * Removes a provider credential only when its current stored type matches.
  *
  * The comparison and write share the same proper-lockfile lock used by pi's

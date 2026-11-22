@@ -6,6 +6,7 @@ import { randomUUID } from "crypto";
 import type { AssistantMessage } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { hasJsonContentType, isApiRequestAllowed } from "@/lib/request-security";
+import { isLiteralApiKey } from "@/lib/api-key-migration";
 
 export const dynamic = "force-dynamic";
 
@@ -60,7 +61,16 @@ export async function POST(req: Request) {
       },
     }, null, 2), "utf8");
 
-    const modelRuntime = await ModelRuntime.create({ modelsPath });
+    // A key typed in the panel is tested, not the one auth.json may already hold
+    // for this provider: pi resolves a stored credential first, so the draft's
+    // literal key goes into a temporary auth file of its own.
+    const draftKey = isLiteralApiKey(body.provider.apiKey) ? body.provider.apiKey.trim() : undefined;
+    const tempAuthPath = draftKey ? join(tempDir, "auth.json") : undefined;
+    if (tempAuthPath && draftKey) {
+      writeFileSync(tempAuthPath, JSON.stringify({ [providerName]: { type: "api_key", key: draftKey } }, null, 2), { mode: 0o600 });
+    }
+
+    const modelRuntime = await ModelRuntime.create({ modelsPath, ...(tempAuthPath ? { authPath: tempAuthPath } : {}) });
     const loadError = modelRuntime.getError();
     if (loadError) return NextResponse.json({ ok: false, error: loadError });
 
