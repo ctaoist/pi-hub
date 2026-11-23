@@ -1,4 +1,5 @@
 import { skillReviewMessages } from "../../skill-review-i18n.js";
+import { pluginConfigMessages } from "../../plugin-config-i18n.js";
 import type { LocalePlugin } from "../types";
 
 /** Pi Hub 内置英语语言包。 */
@@ -7,6 +8,7 @@ export const enLocale: LocalePlugin = {
   label: "English",
   messages: {
     ...skillReviewMessages.en,
+    ...pluginConfigMessages.en,
     "review.title": "Skill review",
     "review.consent": "Review sends bounded conversation and tool excerpts to your chosen model and incurs token charges. Inspect candidates for secrets and accuracy before approval. Locks protect this review service, not ordinary chat tools or editors.",
     "review.automatic": "Automatic review for this project",

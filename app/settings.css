@@ -712,6 +712,27 @@
   min-width: 0;
 }
 
+.plugin-config-field-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.plugin-config-field-row.is-multiline {
+  align-items: start;
+}
+
+.plugin-config-field-value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.plugin-config-field-value > :is(input, textarea) {
+  display: block;
+  box-sizing: border-box;
+}
+
 /* Keep the native resize corner usable when the global scrollbar is present. */
 .agents-system-prompt {
   scrollbar-width: auto;

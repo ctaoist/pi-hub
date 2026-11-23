@@ -1,4 +1,5 @@
 import { skillReviewMessages } from "../../skill-review-i18n.js";
+import { pluginConfigMessages } from "../../plugin-config-i18n.js";
 import type { LocalePlugin } from "../types";
 
 /** Pi Hub 内置简体中文语言包。 */
@@ -7,6 +8,7 @@ export const zhCNLocale: LocalePlugin = {
   label: "简体中文",
   messages: {
     ...skillReviewMessages["zh-CN"],
+    ...pluginConfigMessages["zh-CN"],
     "review.title": "技能提炼",
     "review.consent": "提炼会将限量的对话和工具片段发送给所选模型，并产生模型费用。采纳前请检查候选是否包含敏感信息或错误。锁定仅保护提炼流程，不限制普通聊天工具或编辑器。",
     "review.automatic": "自动提炼此项目",

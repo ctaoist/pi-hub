@@ -48,6 +48,7 @@ import {
   ConfigTrustNotice,
 } from "./SettingsUi";
 import { itemsToSwitch, projectTrustReloadKey } from "./settings-ui-helpers";
+import { PluginConfigEditor } from "./PluginConfigEditor";
 
 type PluginScope = PluginPackageInfo["scope"];
 type PluginAction = "install" | "remove" | "update" | "disable" | "enable";
@@ -510,6 +511,11 @@ function PackageDetail({
         </ConfigDetailGridRow>
       </ConfigDetailGrid>
 
+      {pkg.installedPath && <PluginConfigEditor
+        key={JSON.stringify([cwd, pkg.scope, pkg.source, pkg.installedPath, pkg.version])}
+        cwd={cwd} source={pkg.source} scope={pkg.scope} blocked={busy || reloadBusy}
+      />}
+
       {!pkg.disabled && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <ConfigSectionTitle>{t("i18n.resolvedResources")}</ConfigSectionTitle>
@@ -531,7 +537,7 @@ function PackageDetail({
   );
 }
 
-function StandaloneExtensionDetail({ extension }: { extension: PluginStandaloneExtensionInfo }) {
+function StandaloneExtensionDetail({ extension, cwd }: { extension: PluginStandaloneExtensionInfo; cwd: string }) {
   const { t } = useI18n();
   const status = extension.enabled ? "loaded" : "disabled";
 
@@ -555,6 +561,10 @@ function StandaloneExtensionDetail({ extension }: { extension: PluginStandaloneE
           {shortenPath(extension.path)}
         </ConfigDetailGridRow>
       </ConfigDetailGrid>
+      <PluginConfigEditor
+        key={JSON.stringify([cwd, extension.scope, extension.path])}
+        cwd={cwd} source={extension.path} scope={extension.scope} kind="extension" blocked={false}
+      />
     </ConfigDetailStack>
   );
 }
@@ -1015,7 +1025,7 @@ export function PluginsConfig({
                 onInstall={installPlugin}
               />
             ) : loading ? null : selectedExtension ? (
-              <StandaloneExtensionDetail extension={selectedExtension} />
+              <StandaloneExtensionDetail extension={selectedExtension} cwd={cwd} />
             ) : selectedPackage ? (
               <PackageDetail
                 key={packageKey(selectedPackage)}
